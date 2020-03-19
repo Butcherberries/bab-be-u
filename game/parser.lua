@@ -190,7 +190,7 @@ function findUnit(words, extra_words_, dir, outer, no_verb_cond, is_subject)
       local words_ = copyTable(words)
       if infix.type.cond_infix_verb_plus then
         local verb = infix.name:sub(5)
-        table.insert(words_, 1, {name = verb, type = tiles_list[tiles_by_name["txt_"..verb]].texttype})
+        table.insert(words_, 1, {name = verb, type = getTile("txt_"..verb).typeset})
       end
       local verb
       verb_phrase, words_ = findVerbPhrase(words_, extra_words, dir, enclosed, true)
@@ -339,6 +339,29 @@ function findClass(words)
   return unit, words
 end
 
+function findProperty(words)
+  local prefix
+  if words[1].name == "samepaint" or words[1].name == "samefloat" or words[1].name == "sameface" then
+    prefix = table.remove(words, 1)
+    if #words == 0 or words[1].name ~= "glued" then return end
+  end
+
+  local unit
+  if words[1].type and words[1].type.property then
+    unit = copyTable(table.remove(words, 1))
+  end
+
+  if prefix then
+    unit.mods = unit.mods or {}
+    table.insert(unit.mods, prefix)
+    unit.prefix = prefix.name
+  end
+  if unit then
+    found = {unit, words}
+    return unit, words
+  end
+end
+
 function findVerbPhrase(words, extra_words_, dir, enclosed, noconds, no_verb_cond)
   local extra_words = {}
   local objects = {}
@@ -363,8 +386,9 @@ function findVerbPhrase(words, extra_words_, dir, enclosed, noconds, no_verb_con
       table.insert(objects, found[1])
       words = found[2]
       valid = true
-    elseif verb.type.verb_property and words[1].type.property then
-      table.insert(objects, table.remove(words, 1))
+    elseif verb.type.verb_property and findProperty(copyTable(words)) then
+      table.insert(objects, found[1])
+      words = found[2]
       valid = true
     elseif verb.type.verb_direction and words[1].type.direction then
       table.insert(objects, table.remove(words, 1))

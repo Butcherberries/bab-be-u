@@ -203,24 +203,18 @@ function parseRules(undoing)
   if (dittos ~= nil) then
     table.sort(dittos, function(a, b) return a.y < b.y end ) 
     for _,unit in ipairs(dittos) do
-      local mimic = getTextOnTile(unit.x,unit.y-1)
-      --print(unit.dir)
-      --print(hasProperty(unit,"rotatbl"))
-      if hasProperty(unit,"rotatbl") and unit.dir == 5 then
-        mimic = getTextOnTile(unit.x,unit.y+1)
-      end
+      local dir = dirAdd(unit.rotatdir,-2)
+      local dx, dy = dirs8[dir][1], dirs8[dir][2]
+      local _, __, ___, x, y = getNextTile(unit,dx,dy,dir)
+      local mimic = getTextOnTile(x,y)
       
       if #mimic == 1 then
         unit.textname = mimic[1].textname
-        unit.texttype = mimic[1].texttype
-        if mimic[1].color_override ~= nil then
-          unit.color_override = mimic[1].color_override
-        else
-          unit.color_override = mimic[1].color
-        end
+        unit.typeset = mimic[1].typeset
+        unit.color_override = getUnitColor(mimic[1])
       else
         unit.textname = "  "
-        unit.texttype = {ditto = true}
+        unit.typeset = {ditto = true}
         unit.color_override = {0,3}
       end
     end
@@ -244,7 +238,7 @@ function parseRules(undoing)
     end
     --Text that ben't wurd is a special case.
     table.insert(result, #matchesRule(nil, "ben't", "wurd"));
-    --Text/wurds ignoring a poor toll could cause parsing to change.
+    --txt/wurds ignoring a poor toll could cause parsing to change.
     table.insert(result, rules_with["poortoll"] and #matchesRule(nil, "ignor", nil) or 0);
     --RP can cause a parse effecting rule to be RP'd. (TODO: For mysterious reasons, this doesn't work with wurd.)
      table.insert(result, #matchesRule(nil, "rp", "?"));
@@ -289,7 +283,7 @@ function parseRules(undoing)
             validrule = false
           end
           
-          if (i == 2) and hasRule(unit,"be","ortho") and not hasRule(unit,"be","diag") then
+          if (i == 2) and (unit.wobble or hasRule(unit,"be","ortho")) and not hasRule(unit,"be","diag") then
             validrule = false
           end
           --print(tostring(x)..","..tostring(y)..","..tostring(dx)..","..tostring(dy)..","..tostring(ndx)..","..tostring(ndy)..","..tostring(#getUnitsOnTile(x+ndx, y+ndy, "text"))..","..tostring(#getUnitsOnTile(x+dx, y+dy, "text")))
@@ -342,7 +336,7 @@ function parseRules(undoing)
               local new_word = {}
 
               new_word.name = unit.textname
-              new_word.type = unit.texttype
+              new_word.type = unit.typeset
               new_word.unit = unit
               new_word.dir = dir
 
@@ -535,24 +529,28 @@ function parseSentence(sentence_, params_, dir) --prob make this a local functio
     end
   end
   
-  local function addUnits(list, set, root, dirs)
+  local function addUnits(list, set, root, dirs, mods)
     if root.unit and not set[root.unit] then
       table.insert(list, root.unit)
       set[root.unit] = true
       dirs[root.unit] = root.dir
+      mods[root.unit] = mods[root.unit] or {}
       if root.conds then
         for _,cond in ipairs(root.conds) do
-          addUnits(list, set, cond, dirs)
+          addUnits(list, set, cond, dirs, mods)
         end
       end
       if root.others then
         for _,other in ipairs(root.others) do
-          addUnits(list, set, other, dirs)
+          addUnits(list, set, other, dirs, mods)
         end
       end
       if root.mods then
         for _,mod in ipairs(root.mods) do
-          addUnits(list, set, mod, dirs)
+          if mod.unit then
+            table.insert(mods[root.unit], mod.unit)
+          end
+          addUnits(list, set, mod, dirs, mods)
         end
       end
     end
@@ -571,13 +569,14 @@ function parseSentence(sentence_, params_, dir) --prob make this a local functio
         local list = {}
         local set = {}
         local dirs = {}
+        local mods = {}
         for _,word in ipairs(extra_words) do
-          addUnits(list, set, word, dirs)
+          addUnits(list, set, word, dirs, mods)
         end
-        addUnits(list, set, rule.subject, dirs)
-        addUnits(list, set, rule.verb, dirs)
-        addUnits(list, set, rule.object, dirs)
-        local full_rule = {rule = rule, units = list, dir = dir, units_set = set, dirs = dirs}
+        addUnits(list, set, rule.subject, dirs, mods)
+        addUnits(list, set, rule.verb, dirs, mods)
+        addUnits(list, set, rule.object, dirs, mods)
+        local full_rule = {rule = rule, units = list, dir = dir, units_set = set, dirs = dirs, mods = mods}
         -- print(fullDump(full_rule))
         
         local add = false
@@ -601,7 +600,7 @@ function parseSentence(sentence_, params_, dir) --prob make this a local functio
           if other.dir == full_rule.dir then
             local subset = true
             for _,u in ipairs(other.units) do
-              if (not full_rule.units_set[u] or (full_rule.dirs[u] ~= other.dirs[u])) and not u.texttype["and"] then 
+              if (not full_rule.units_set[u] or (full_rule.dirs[u] ~= other.dirs[u]) or not eq(full_rule.mods[u], other.mods[u])) and not u.typeset["and"] then 
                 subset = false
                 break
               end
@@ -611,7 +610,7 @@ function parseSentence(sentence_, params_, dir) --prob make this a local functio
             else
               local subset = true
               for _,u in ipairs(full_rule.units) do
-                if (not other.units_set[u] or (full_rule.dirs[u] ~= other.dirs[u])) and not u.texttype["and"] then
+                if (not other.units_set[u] or (full_rule.dirs[u] ~= other.dirs[u]) or not eq(full_rule.mods[u], other.mods[u])) and not u.typeset["and"] then
                   subset = false
                   break
                 end
@@ -655,7 +654,7 @@ function addRule(full_rule)
   for _,unit in ipairs(units) do
     unit.active = true
     if not unit.old_active and not first_turn then
-      addParticles("rule", unit.x, unit.y, unit.color_override or unit.color)
+      addParticles("rule", unit.x, unit.y, getUnitColor(unit))
       new_rule = true
     end
     unit.old_active = unit.active
@@ -724,8 +723,8 @@ function addRule(full_rule)
 
   if rules.object.unit then
     local property = false
-    local tile_id = tiles_by_name["txt_" .. verb]
-    if tile_id and tiles_list[tile_id].texttype and tiles_list[tile_id].texttype.verb_property then
+    local tile = getTile("txt_" .. verb)
+    if tile and tile.typeset.verb_property then
       property = true
     end
     if property and not rules.object.unit.used_as["property"] then
@@ -755,11 +754,17 @@ function addRule(full_rule)
     table.insert(rules.subject.conds, rules.subject);
   end
   if object:find("letter_custom") and object.unit then
-    local tile_id = tiles_by_name["txt_"..verb]
-    if tile_id and tiles_list[tile_id].texttype and tiles_list[tile_id].texttype.verb_unit then
+    local tile = getTile("txt_"..verb)
+    if tile and tile.typeset.verb_unit then
       rules.object.conds = copyTable(rules.object.conds) or {};
       table.insert(rules.object.conds, rules.object);
     end
+  end
+  
+  if verb == "is" then
+    local new_verb = copyTable(rules.verb)
+    new_verb.name = "be"
+    addRuleSimple(rules.subject, new_verb, rules.object, units, dir)
   end
 
   if subject == "every1" then
@@ -851,7 +856,7 @@ function addRule(full_rule)
       end
     end
   elseif subject_not % 2 == 1 then
-    if tiles_by_name[subject] or subject == "text" then
+    if getTile(subject) or subject == "text" then
       local new_subjects = getEverythingExcept(subject)
       for _,v in ipairs(new_subjects) do
         addRuleSimple({v, rules.subject.conds}, rules.verb, rules.object, units, dir)
@@ -891,7 +896,7 @@ function addRule(full_rule)
       end
     end
   elseif object_not % 2 == 1 then
-    if tiles_by_name[object] or object:starts("this") or object == "text" or object == "mous" then
+    if getTile(object) or object:starts("this") or object == "text" or object == "mous" then
       local new_objects = {}
       --skul be skul turns into skul ben't skuln't - but this needs to apply even to special objects (specific text, txt, no1, lvl, mous).
       if verb == "be" and verb_not % 2 == 1 then
@@ -1163,7 +1168,7 @@ function shouldReparseRulesIfConditionalRuleExists(r1, r2, r3, even_non_wurd)
           
           --TODO: How should a parse effecting THE rule work? Continual reparsing, like frenles?
           
-          --As another edge to consider, what if the level geometry changes suddenly? Well, portals already trigger reparsing rules when they update, which is the only kind of external level geometry change. In addition, text/wurds changing flye/tall surprisingly would already trigger rule reparsing since we checked those rules. But, what about a non-wurd changing flye/tall, allowing it to go through a portal, changing the condition of a different parse effecting rule? This can also happen with level be go arnd/mirr arnd turning on or off. parseRules should fire in such cases. So specifically for these cases, even though they aren't wurd/text, we do want to fire parseRules when their conditions change.
+          --As another edge to consider, what if the level geometry changes suddenly? Well, portals already trigger reparsing rules when they update, which is the only kind of external level geometry change. In addition, txt/wurds changing flye/tall surprisingly would already trigger rule reparsing since we checked those rules. But, what about a non-wurd changing flye/tall, allowing it to go through a portal, changing the condition of a different parse effecting rule? This can also happen with level be go arnd/mirr arnd turning on or off. parseRules should fire in such cases. So specifically for these cases, even though they aren't wurd/text, we do want to fire parseRules when their conditions change.
           
           --One final edge case to consider: MOUS, which just moves around on its own. This also triggers should_parse_rules_at_turn_boundary, since that's how often we care about MOUS moving.
         end

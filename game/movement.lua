@@ -274,6 +274,25 @@ function doMovement(movex, movey, key)
           end
         end
       end
+
+      local you = getUnitsWithEffectAndCount("you")
+      for unit,uness in pairs(you) do
+        if not hasProperty(unit, "slep") and slippers[unit.id] == nil and timecheck(unit,"be","you") then
+          if (key == "wasd") or ((key == "udlr") and not hasProperty(nil,"utoo")) or ((key == "numpad" or key == "ijkl") and not hasProperty(nil,"utres")) then
+            if movex == 0 or movey == 0 then
+              local dir = dirs8_by_offset[movex][movey]
+              --If you want baba style 'when you moves, even if it fails to move, it changes direction', uncomment this.
+              table.insert(unit.moves, {reason = "u", dir = dir, times = 1})
+              --[[addUndo({"update", unit.id, unit.x, unit.y, unit.dir})
+              updateDir(unit, dir)]]
+              if #unit.moves > 0 and not already_added[unit] then
+                table.insert(moving_units, unit)
+                already_added[unit] = true
+              end
+            end
+          end
+        end
+      end
       
       local yall = getUnitsWithEffectAndCount("y'all")
       for unit,uness in pairs(yall) do
@@ -556,7 +575,6 @@ function doMovement(movex, movey, key)
           if key == "wasd" or key == "udlr" or key == "numpad" or key == "ijkl" then
             local dir = dirs8_by_offset[movex][movey]
             table.insert(unit.moves, {reason = "curse", dir = dir, times = 1})
-            print("its one")
             if #unit.moves > 0 and not already_added[unit] then
               table.insert(moving_units, unit)
               already_added[unit] = true
@@ -568,7 +586,7 @@ function doMovement(movex, movey, key)
 
     for _,unit in pairs(moving_units) do
       if not unit.stelth and not hasProperty(unit, "loop") and timecheck(unit) then
-        addParticles("movement-puff", unit.x, unit.y, unit.color_override or unit.color)
+        addParticles("movement-puff", unit.x, unit.y, getUnitColor(unit))
       end
     end
     
@@ -644,9 +662,10 @@ It is probably possible to do, but lily has decided that it's not important enou
             end
             --movedebug("considering:"..unit.fullname..","..dir)
             local success,movers,specials = true,{},{}
-            if hasProperty(unit,"glued") then
+            local is_glued, glued_rule = hasProperty(unit,"glued",true)
+            if is_glued then
               --Glued units get moved as a single group.
-              local units, pushers, pullers = FindEntireGluedUnit(unit, dx, dy)
+              local units, pushers, pullers = FindEntireGluedUnit(unit, dx, dy, glued_rule)
               for _,pusher in ipairs(pushers) do
                 local success_,movers_,specials_ = canMove(pusher, dx, dy, dir, {pushing = true, reason = data.reason})
                 mergeTable(movers,movers_)
@@ -779,7 +798,7 @@ It is probably possible to do, but lily has decided that it's not important enou
   
   if scene.setPathlockBox then 
     local showlock
-    for _,u in ipairs(getUnitsWithEffect("u")) do
+    for _,u in ipairs(getUnitsWithEffect("curse")) do
       for _,dir in ipairs(dirs8) do
         local _, __, ___, x, y = getNextTile(u, dir[1], dir[2], dirs8_by_offset[dir[1]][dir[2]])
         local facing = getUnitsOnTile(x, y, "lin")
@@ -821,7 +840,7 @@ function doAction(action)
     playSound("break", 0.5)
     local victims = action[2]
     for _,unit in ipairs(victims) do
-      addParticles("destroy", unit.x, unit.y, unit.color_override or unit.color)
+      addParticles("destroy", unit.x, unit.y, getUnitColor(unit))
       --no protecc check because it can't safely be prevented here (we might be moving OoB)
       unit.removed = true
       unit.destroyed = true
@@ -830,7 +849,7 @@ function doAction(action)
     playSound("snacc", 0.5)
     local victims = action[2]
     for _,unit in ipairs(victims) do
-      addParticles("destroy", unit.x, unit.y, unit.color_override or unit.color)
+      addParticles("destroy", unit.x, unit.y, getUnitColor(unit))
       if not hasProperty(unit, "protecc") then
         unit.removed = true
         unit.destroyed = true
@@ -1589,15 +1608,15 @@ function doPortal(unit, px, py, move_dir, dir, reverse)
         -- Count portal colors
         local found_colored = {}
         for p,_ in pairs(portals_direct) do
-          local color_id = getColor(p)[1]..","..getColor(p)[2]
+          local color_id = getUnitColor(p)[1]..","..getUnitColor(p)[2]
           found_colored[color_id] = (found_colored[color_id] or 0) + 1
         end
         -- Only add portals to list if:
         -- A. They share the same color, or
         -- B. Only one of both color exists
         for p,_ in pairs(portals_direct) do
-          local p_color_id = getColor(p)[1]..","..getColor(p)[2]
-          local v_color_id = getColor(v)[1]..","..getColor(v)[2]
+          local p_color_id = getUnitColor(p)[1]..","..getUnitColor(p)[2]
+          local v_color_id = getUnitColor(v)[1]..","..getUnitColor(v)[2]
           if p_color_id == v_color_id then
             table.insert(portals, p)
           elseif found_colored[p_color_id] == 1 and found_colored[v_color_id] == 1 then
@@ -2004,8 +2023,9 @@ function canMoveCore(unit,dx,dy,dir,o) --pushing, pulling, solid_name, reason, p
           -- print("success")
           if o.pushing and ignoreCheck(v,unit) then
             --glued units are pushed all at once or not at all
-            if hasProperty(v, "glued") then
-              local units, pushers, pullers = FindEntireGluedUnit(v, dx, dy)
+            local is_glued, glued_rule = hasProperty(v, "glued", true)
+            if is_glued then
+              local units, pushers, pullers = FindEntireGluedUnit(v, dx, dy, glued_rule)
               
               local all_success = true
               local newer_movers = {}
@@ -2152,10 +2172,12 @@ function getNextLevels()
   local curses = getUnitsWithEffect("curse")
   for _,unit in ipairs(curses) do
     local lvls = getUnitsOnTile(unit.x, unit.y, nil, false, unit)
+    local already_added = {}
     for _,lvl in ipairs(lvls) do
-      if lvl.special.level and lvl.special.visibility == "open" then
+      if lvl.special.level and not already_added[lvl.special.level] and lvl.special.visibility == "open" then
         table.insert(next_level_objs, lvl)
         table.insert(next_levels, lvl.special.level)
+        already_added[lvl.special.level] = true
       end
     end
   end
@@ -2173,13 +2195,14 @@ function getNextLevels()
   return next_levels, next_level_objs
 end
 
-function FindEntireGluedUnit(unit, dx, dy)
+function FindEntireGluedUnit(unit, dx, dy, glued_rule)
   --print("0:",unit.x,unit.y,dx,dy)
   local units, pushers, pullers = {}, {}, {}
   local visited = {}
   local ignored = {}
-  visited[tostring(unit.x)..","..tostring(unit.y)] = unit
-  local mycolor = unit.color_override or unit.color
+  local unit_added = {}
+  visited[tostring(unit.x)..","..tostring(unit.y)] = {unit, glued_rule}
+  unit_added[unit] = true
   local myorthook = not hasProperty(unit,"diag") or hasProperty(unit,"ortho")
   local mydiagok = not hasProperty(unit,"ortho") or hasProperty(unit,"diag")
   
@@ -2216,7 +2239,8 @@ function FindEntireGluedUnit(unit, dx, dy)
   
   while #unchecked_tiles > 0 do
     local x, y = unchecked_tiles[1][1], unchecked_tiles[1][2]
-    local cur_unit = visited[tostring(x)..","..tostring(y)]
+    local cur_unit, rule = unpack(visited[tostring(x)..","..tostring(y)])
+    local mycolor = getUnitColor(cur_unit)
     --print("a:",x,y,cur_unit)
     table.remove(unchecked_tiles, 1)
     --print("a.5:",#unchecked_tiles)
@@ -2227,20 +2251,33 @@ function FindEntireGluedUnit(unit, dx, dy)
       local xx, yy = x+cur_dx, y+cur_dy
       --print("b:",cur_dx,cur_dy,xx,yy,tostring(xx)..","..tostring(yy),visited[tostring(xx)..","..tostring(yy)])
       --visit surrounding tiles if we don't know their status yet
-      if visited[tostring(xx)..","..tostring(yy)] == nil then
-        --print("c")
-        visited[tostring(xx)..","..tostring(yy)] = false
-        local others = getUnitsOnTile(xx, yy)
-        local first = false
-        for _,other in ipairs(others) do
-          --print("d:",other.name)
-          if hasProperty(other,"glued") and ignoreCheck(cur_unit,other,"glued") then
-            local ocolor = other.color_override or other.color
-            --print("e:", dump(mycolor),dump(ocolor))
-            if (mycolor[1] == ocolor[1] and mycolor[2] == ocolor[2]) then
+      --print("c")
+      local others = getUnitsOnTile(xx, yy)
+      local first = false
+      for _,other in ipairs(others) do
+        --print("d:",other.name)
+        if not unit_added[other] then
+          local other_is_glued, other_rule = hasProperty(other,"glued",true)
+          if other_is_glued and ignoreCheck(cur_unit,other,"glued") then
+            local matched = true
+            if other_rule.rule.object.mods then
+              for _,prefix in ipairs(other_rule.rule.object.mods) do
+                if prefix.name == "samepaint" then
+                  local ocolor = getUnitColor(other)
+                  matched = (mycolor[1] == ocolor[1] and mycolor[2] == ocolor[2])
+                elseif prefix.name == "sameface" then
+                  matched = (cur_unit.dir == other.dir)
+                elseif prefix.name == "samefloat" then
+                  matched = sameFloat(cur_unit, other)
+                end
+                if not matched then break end
+              end
+            end
+            if matched then
               --print("f, we did it")
               if ignoreCheck(other,cur_unit,"glued") then
                 table.insert(units, other)
+                unit_added[other] = true
               else
                 ignored[other] = true
               end
@@ -2250,13 +2287,13 @@ function FindEntireGluedUnit(unit, dx, dy)
                 table.insert(unchecked_tiles, {xx, yy})
                 --print("f.5:",#unchecked_tiles)
                 first = true
-                visited[tostring(xx)..","..tostring(yy)] = other
+                visited[tostring(xx)..","..tostring(yy)] = {other, other_rule}
               end
             end
           end
         end
-        --END iterate units on that tile
       end
+      --END iterate units on that tile
       --END visit surrounding unvisited tile
         
       --while checking the forward/backward direction, add the current unit to pushers/pullers if we know the tile ahead of/behind it is vacant

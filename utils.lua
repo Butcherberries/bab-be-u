@@ -102,8 +102,8 @@ function clear()
   for i,page in ipairs(selector_grid_contents) do
     tile_grid[i] = {}
     for j,tile_name in ipairs(page) do
-      if j and tiles_by_name[tile_name] then
-        tile_grid[i][j-1] = tiles_by_name[tile_name]
+      if j then
+        tile_grid[i][j-1] = tile_name
       else
         tile_grid[i][j-1] = nil
       end
@@ -150,9 +150,6 @@ function initializeGraphicalPropertyCache()
   {
     "flye", "slep", "tranz", "gay", "stelth", "colrful", "delet", "rave", "enby" -- miscelleaneous graphical effects
   }
-  for _,prop_name in ipairs(unicode_flag_list) do
-    table.insert(properties_to_init, prop_name)
-  end
   for i = 1, #properties_to_init do
     local prop = properties_to_init[i]
     if (graphical_property_cache[prop] == nil) then graphical_property_cache[prop] = {} end
@@ -264,31 +261,29 @@ function loadMap()
         if not dofloodfill then
           local unit = createUnit(tile, x, y, dir, false, id, nil, color)
           unit.special = specials
-        elseif tile == tiles_by_name["lvl"] then
+        elseif tile == "lvl" then
           if readSaveFile{"levels", specials.level, "seen"} then
             specials.visibility = "open"
             local tfs = readSaveFile{"levels", specials.level, "transform"}
-            for i,t in ipairs(tfs or {tiles_listPossiblyMeta(tile).name}) do
+            for i,t in ipairs(tfs or {tile}) do
               if i == 1 then
-                local unit = createUnit(tiles_by_namePossiblyMeta(t), x, y, dir, false, id, nil, color)
+                local unit = createUnit(t, x, y, dir, false, id, nil, color)
                 unit.special = deepCopy(specials)
                 if readSaveFile{"levels", specials.level, "won"} or readSaveFile{"levels", specials.level, "clear"} then
                   table.insert(floodfill, {unit, 1})
                 end
               else
-                table.insert(extra_units, {tiles_by_namePossiblyMeta(t), x, y, dir, color, deepCopy(specials)})
+                table.insert(extra_units, {t, x, y, dir, color, deepCopy(specials)})
               end
             end
             created[id] = true
-          elseif specials.visibility == "open" then
+          elseif specials.visibility == "open" or specials.visibility == "locked" or specials.visibility == nil then
             local unit = createUnit(tile, x, y, dir, false, id, nil, color)
             unit.special = specials
             created[id] = true
-          elseif specials.visibility == "locked" then
-            table.insert(locked_lvls, {id, tile, x, y, dir, specials, color})
           end
           table.insert(objects, {id, tile, x, y, dir, specials, color})
-        elseif tile == tiles_by_name["lin"] then
+        elseif tile == "lin" then
           if specials.visibility ~= "hidden" then
             local unit = createUnit(tile, x, y, dir, false, id, nil, color)
             unit.special = specials
@@ -301,12 +296,12 @@ function loadMap()
               specials.visibility = "open"
             end
             local tfs = readSaveFile{"levels", specials.level, "transform"}
-            for i,t in ipairs(tfs or {tiles_listPossiblyMeta(tile).name}) do
+            for i,t in ipairs(tfs or {tile}) do
               if i == 1 then
-                local unit = createUnit(tiles_by_namePossiblyMeta(t), x, y, dir, false, id, nil, color)
+                local unit = createUnit(t, x, y, dir, false, id, nil, color)
                 unit.special = specials
               else
-                table.insert(extra_units, {tiles_by_namePossiblyMeta(t), x, y, dir, color, deepCopy(specials)})
+                table.insert(extra_units, {t, x, y, dir, color, deepCopy(specials)})
               end
             end
           else
@@ -337,7 +332,7 @@ function loadMap()
               and (a == 0 or (not orthos[dx][0] and not orthos[0][dy])) then
                 orthos[dx][dy] = true
                 if not created[v[1]] then
-                  if v[2] == tiles_by_name["lvl"] then
+                  if v[2] == "lvl" then
                     if ptype ~= 2 then
                       local unit = createUnit(v[2], v[3], v[4], v[5], false, v[1], nil, v[7])
                       created[v[1]] = true
@@ -352,7 +347,7 @@ function loadMap()
                       table.insert(locked_lvls, v)
                       table.insert(floodfill, {{x = v[3], y = v[4]}, 2})
                     end
-                  elseif (ptype == 1 or ptype == 3) and v[2] == tiles_by_name["lin"] and (not v[6].pathlock or v[6].pathlock == "none") then
+                  elseif (ptype == 1 or ptype == 3) and v[2] == "lin" and (not v[6].pathlock or v[6].pathlock == "none") then
                     local unit = createUnit(v[2], v[3], v[4], v[5], false, v[1], nil, v[7])
                     created[v[1]] = true
                     unit.special = v[6]
@@ -383,7 +378,7 @@ function loadMap()
         end
       end
       if not in_bounds then
-        createUnit(tiles_by_name["bordr"], x, y, 1)
+        createUnit("bordr", x, y, 1)
       end
     end
   end
@@ -427,7 +422,7 @@ function loadStayTher()
 end
 
 function initializeOuterLvl()
-  outerlvl = createUnit(tiles_by_name["lvl"], -999, -999, 1, nil, nil, true)
+  outerlvl = createUnit("lvl", -999, -999, 1, nil, nil, true)
 end
 
 function initializeEmpties()
@@ -437,7 +432,7 @@ function initializeEmpties()
   for x=0,mapwidth-1 do
     for y=0,mapheight-1 do
       local tileid = x + y * mapwidth
-      empties_by_tile[tileid] = createUnit(tiles_by_name["no1"], x, y, (((tileid - 1) % 8) + 1), nil, nil, true)
+      empties_by_tile[tileid] = createUnit("no1", x, y, (((tileid - 1) % 8) + 1), nil, nil, true)
     end
   end
 end
@@ -546,6 +541,9 @@ function matchesRule(rule1,rule2,rule3,stopafterone,debugging)
 
   --there are more properties than there are nouns, so we're more likely to miss based on a property not existing than based on a noun not existing
   rules_list = rules_with[(nrules[2] ~= "be" and nrules[2]) or nrules[3] or nrules[1] or nrules[2]] or {}
+  if #rules_list == 0 and rules_with[2] == "be" then
+    rules_list = rules_with["is"]
+  end
   mergeTable(rules_list, rules_with[fnrules[3] or fnrules[1]] or {})
 
   if (debugging) then
@@ -874,7 +872,7 @@ end
 function hasProperty(unit,prop,return_rule)
   if not rules_with[prop] and prop ~= "?" then return false end
   if unit and unit.fullname == "babby" and prop == "thicc" and not hasRule(unit, "be", "notranform") then return false end
-  local has_be_rule, be_rule = hasRule(unit, "be", prop)
+  local has_be_rule, be_rule = hasRule(unit, "be", prop, true)
   if has_be_rule then return true, (return_rule and be_rule or nil) end
   if type(unit) ~= "table" then return false end
   if not rules_with["giv"] then return false end
@@ -931,13 +929,14 @@ function countProperty(unit, prop, ignore_flye)
 end
 
 function hasU(unit)
-  return hasProperty(unit,"u") or hasProperty(unit,"utoo") or hasProperty(unit,"utres") or hasProperty(unit,"y'all")
+  return hasProperty(unit,"u") or hasProperty(unit,"utoo") or hasProperty(unit,"utres") or hasProperty(unit,"you") or hasProperty(unit,"y'all")
 end
 
 function getUs()
   local yous = getUnitsWithEffect("u")
   mergeTable(yous,getUnitsWithEffect("utoo"))
   mergeTable(yous,getUnitsWithEffect("utres"))
+  mergeTable(yous,getUnitsWithEffect("you"))
   mergeTable(yous,getUnitsWithEffect("y'all"))
   return yous
 end
@@ -1595,7 +1594,6 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
       --print(x, y)
       --print(last_click_x, last_click_y)
     elseif main_palette_for_colour[condtype] then
-      local colour = unit.color_override or unit.color
       if unit.fullname == "no1" then
         result = false
       elseif unit.rave or unit.colrful or unit.gay then
@@ -2208,7 +2206,6 @@ function addParticles(ptype,x,y,color,count)
   
   if not settings["particles_on"] then return end
   
-  if type(color[1]) == "table" then color = color[1] end
   if ptype == "destroy" then
     local ps = love.graphics.newParticleSystem(sprites["circle"])
     local px = (x + 0.5) * TILE_SIZE
@@ -2391,14 +2388,10 @@ function addParticles(ptype,x,y,color,count)
     ps:setSpeed(math.random(30, 40))
     ps:setLinearDamping(5)
     ps:setParticleLifetime(math.random(0.50, 1.10))
-    if type(color[1]) == "table" then
-      ps:setColors(getPaletteColor(color[1][1], color[1][2]))
+    if #color == 2 then
+      ps:setColors(getPaletteColor(color[1], color[2]))
     else
-      if #color == 2 then
-        ps:setColors(getPaletteColor(color[1], color[2]))
-      else
-        ps:setColors(color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255)
-      end
+      ps:setColors(color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255)
     end
     ps:start()
     ps:emit(count or 1)
@@ -2514,6 +2507,14 @@ function table.has_value(tab, val)
   end
 
   return false
+end
+
+function string.isText(str)
+  return str:starts("txt_")
+end
+
+function string.isNt(str)
+  return str:ends("n't")
 end
 
 function mergeTable(t, other)
@@ -2722,7 +2723,7 @@ function getAbsolutelyEverythingExcept(except)
   if (except ~= "text") then
     for i,ref in ipairs(referenced_text) do
       --TODO: BEN'T text being returned here causes a stack overflow. Prevent it until a better solution is found.
-      if ref ~= except and (ref == "txt_n't" or not ref:ends("n't")) then
+      if ref ~= except and not ref:ends("n't") then
         table.insert(result, ref)
       end
     end
@@ -2742,7 +2743,7 @@ function getEverythingExcept(except)
 
   for i,ref in ipairs(ref_list) do
     --TODO: BEN'T text being returned here causes a stack overflow. Prevent it until a better solution is found.
-    if ref ~= except and (ref == "txt_n't" or not ref:ends("n't")) then
+    if ref ~= except and not ref:ends("n't") then
       table.insert(result, ref)
     end
   end
@@ -3004,12 +3005,12 @@ function fillTextDetails(sentence, old_sentence, orig_index, word_index)
     if newname:starts("txt_") then
       newname = newname:sub(5)
     end
-    table.insert(ret,{type = text_list[word].texttype or {object = true}, name = newname, unit=old_sentence[orig_index].unit})
+    table.insert(ret,{type = text_list[word].typeset or {object = true}, name = newname, unit=old_sentence[orig_index].unit})
     w = w+1
   end
   for i=orig_index+1,(word_index-1) do --extra ellipses for the purposes of making sure the parser gets it properly.
     --print("aa:",old_sentence[i])
-    table.insert(ret,{type = text_list["..."].texttype or {object = true}, name = "...", unit=old_sentence[i].unit})
+    table.insert(ret,{type = text_list["..."].typeset or {object = true}, name = "...", unit=old_sentence[i].unit})
   end
   return ret
 end
@@ -3020,26 +3021,6 @@ function addTables(source, to_add)
     table.insert(source, x)
   end
   return source
-end
-
-function do_utils_thing()
-  text_in_tiles = {} --list of text in an array, for ideal searching
-  text_list = {} --list of text, but without aliases
-  for _,tile in ipairs(tiles_list) do
-    if tile.type == "text" and tile.texttype and not tile.texttype.letter then
-      local textname = string.sub(tile.name:gsub("%s+", ""),5) --removes spaces too
-
-      text_in_tiles[textname] = textname
-      if (tile.alias ~= nil) then
-        for a,ali in ipairs(tile.alias) do
-          text_in_tiles[ali] = textname
-        end
-      end
-
-      text_list[textname] = tile
-      text_list[textname].textname = string.sub(tile.name,5)
-    end
-  end
 end
 
 --[[function dumpOfProperty(table, searchterm)
@@ -3212,15 +3193,15 @@ function addBaseRule(subject, verb, object, subjcond)
       subject = {
         name = subject,
         conds = {subjcond},
-        type = tiles_list[tiles_by_name[subjectname] or 2].texttype or {},
+        type = (getTile(subjectname) or getTile("txt_bab")).typeset,
       },
       verb = {
         name = verb,
-        type = tiles_list[tiles_by_name["txt_"..verb] or 2].texttype or {},
+        type = (getTile(verb) or getTile("txt_be")).typeset,
       },
       object = {
         name = object,
-        type = tiles_list[tiles_by_name[objectname] or 2].texttype or {},
+        type = (getTile(objectname) or getTile("txt_bab")).typeset,
       }
     },
     units = {},
@@ -3241,16 +3222,16 @@ function addRuleSimple(subject, verb, object, units, dir)
       subject = getTableWithDefaults(copyTable(subject), {
         name = subject[1],
         conds = subject[2],
-        type = tiles_list[tiles_by_name[subjectname] or 2].texttype or {},
+        type = (getTile(subjectname) or getTile("txt_bab")).typeset,
       }),
       verb = getTableWithDefaults(copyTable(verb), {
         name = verb[1],
-        type = tiles_list[tiles_by_name["txt_"..(verb[1] or verb.name or "")] or 2].texttype or {},
+        type = (getTile("txt_"..(verb[1] or verb.name or "")) or getTile("txt_be")).typeset,
       }),
       object = getTableWithDefaults(copyTable(object), {
         name = object[1],
         conds = object[2],
-        type = tiles_list[tiles_by_name[objectname] or 2].texttype or {},
+        type = (getTile(objectname) or getTile("txt_bab")).typeset,
       })
     },
     units = units,
@@ -3392,7 +3373,7 @@ function anagram_finder.run()
   local letters = {}
   local multi = {}
   for _,unit in ipairs(units_by_name["text"]) do
-    if unit.texttype.letter then
+    if unit.typeset.letter then
       if #unit.textname == 1 then
         letters[unit.textname] = (letters[unit.textname] or 0) + 1
       else
@@ -3402,8 +3383,8 @@ function anagram_finder.run()
   end
   anagram_finder.words = {}
   for _,tile in ipairs(tiles_list) do
-    if tile.type == "text" and not tile.texttype.letter then
-      local word = tile.name:sub(5):gsub(" ","")
+    if tile.is_text and not tile.typeset.letter then
+      local word = tile.txtname
       local letters = copyTable(letters)
       local multi = copyTable(multi)
       local not_match = false
@@ -3458,7 +3439,7 @@ function anagram_finder.run()
         end
       end
       if not not_match then
-        table.insert(anagram_finder.words, tile.name:sub(5))
+        table.insert(anagram_finder.words, tile.txtname)
       end
     end
   end
@@ -3538,7 +3519,7 @@ end
 function getTableWithDefaults(o, default)
   o = o or {}
   for k,v in pairs(default) do
-    if not o[k] then o[k] = v end
+    if o[k] == nil then o[k] = v end
   end
   return o
 end
@@ -3655,35 +3636,6 @@ function getIcon(path)
   end
 end
 
-function getUnitColors(unit, index, override_)
-  local override = override_ or unit.color_override
-  local colors = type(unit.color[1]) == "table" and unit.color or {unit.color}
-  if index then
-    if override then
-      if not unit.colored or unit.colored[index] == true then
-        return override
-      elseif type(unit.colored[index]) == "table" and eq(override, colors[index]) then
-        return unit.colored[index]
-      end
-      return colors[index]
-    else
-      return colors[index]
-    end
-  elseif override then
-    colors = copyTable(colors)
-    for i,_ in ipairs(colors) do
-      if not unit.colored or unit.colored[i] == true then
-        return override
-      elseif type(unit.colored[i]) == "table" and eq(override, colors[i]) then
-        return unit.colored[i]
-      end
-    end
-    return colors
-  else
-    return colors
-  end
-end
-
 -- logic for how this function works:
 -- nil checks (both nil -> true, one nil -> false)
 -- loop for colors in a if there are multiple
@@ -3752,4 +3704,541 @@ function execute(command)
   handle:close()
 
   return result
+end
+
+function addTile(tile)
+  tile.types = tile.types or {"object"}
+  tile.painted = tile.painted or {true}
+  tile.rotate = tile.rotate or false
+  tile.portal = tile.portal or false
+  tile.wobble = tile.wobble or false
+  tile.sprite_transforms = tile.sprite_transforms or {}
+  tile.features = tile.features or {}
+  tile.tags = tile.tags or {}
+  tile.alias = tile.alias or {}
+  tile.old_names = tile.old_names or {}
+
+  tile.nt = tile.nt or false
+  tile.meta = tile.meta or 0
+
+  if tile.is_text == nil then
+    tile.is_text = tile.name:starts("txt_") or tile.name:starts("letter_")
+  end
+
+  if tile.convertible == nil then
+    tile.convertible = true
+  end
+
+  tile.layer = tile.layer or (tile.is_text and 20 or 1)
+  tile.txtname = tile.txtname or (tile.is_text and tile.name:sub(5) or tile.name)
+
+  if not tile.display then
+    tile.display = tile.txtname
+
+    if tile.nt then
+      tile.display = tile.display .. " n't"
+    end
+
+    for i = 1, tile.meta do
+      tile.display = tile.display .. " txt"
+    end
+  end
+
+  tile.typeset = {}
+  for _,type in ipairs(tile.types) do
+    tile.typeset[type] = true
+  end
+
+
+  tiles_list[tile.name] = tile
+  for _,old in ipairs(tile.old_names) do
+    tiles_by_old_name[old] = tile
+  end
+  
+  if tile.is_text and not tile.typeset.letter then
+    local text_list = tile.wobble and wobble_text_list or text_list
+    local text_in_tiles = tile.wobble and wobble_text_in_tiles or text_in_tiles
+
+    text_list[tile.txtname] = tile
+    text_in_tiles[tile.txtname] = tile.txtname
+
+    for a,ali in ipairs(tile.alias) do
+      text_in_tiles[ali] = tile.txtname
+    end
+  end
+
+  if tile.typeset.group then
+		table.insert(group_names, tile.txtname)
+    table.insert(group_names_nt, tile.txtname.."n't")
+    group_names_set[tile.txtname] = true
+    group_names_set_nt[tile.txtname.."n't"] = true
+	end
+
+  return tile
+end
+
+function getTile(name, old)
+  if tiles_list[name] then
+    return tiles_list[name]
+  end
+
+  if old and tiles_by_old_name[name] then
+    return tiles_by_old_name[name]
+  end
+
+  if name:isNt() then
+    --print("making new tile: " .. name)
+
+    local tile = getTile(name:sub(1, -4), old)
+    if not tile then return nil end
+    tile = deepCopy(tile)
+
+    tile.name = tile.name .. "n't"
+    tile.display = tile.display .. " n't"
+    tile.sprite = tile.metasprite or tile.sprite
+    tile.nt = true
+    tile.old_names = {}
+
+    return addTile(tile)
+  elseif name:isText() then
+    --print("making new tile: " .. name)
+
+    local tile = getTile(name:sub(5), old)
+    if not tile then return nil end
+    tile = deepCopy(tile)
+
+    tile.name = "txt_" .. tile.name
+    tile.display = tile.display .. " txt"
+    tile.sprite = tile.metasprite or tile.sprite
+    tile.types = {"object"}
+    tile.txtname = "txt_" .. tile.txtname
+    tile.is_text = true
+    tile.meta = tile.meta + 1
+    tile.old_names = {}
+    if tile.layer < 20 then
+      tile.layer = 20
+    end
+
+    return addTile(tile)
+  end
+end
+
+function initializeTiles(tiles)
+  tiles_list = {}
+  tiles_by_old_name = {}
+  text_list = {}
+  text_in_tiles = {}
+  wobble_text_list = {}
+  wobble_text_in_tiles = {}
+  group_names = {}
+  group_names_nt = {}
+  group_names_set = {}
+  group_names_set_nt = {}
+  for _,tile in ipairs(tiles) do
+    addTile(tile)
+  end
+end
+
+local function addTry(try, str, extra)
+  if extra then
+    for i = 1, #try do
+      local nya = str:gsub("%?",try[i])
+      table.insert(try, i, nya)
+      i = i + 1
+    end
+  else
+    table.insert(try, 1, str)
+  end
+end
+
+function getTileSprite(name, tile, o)
+  local o = getTableWithDefaults(o, {wobble = 1, sleep = false})
+  local try = o.try or {name}
+  if tile then
+    if name == "os" then
+      local os = love.system.getOS()
+      if os == "Windows" then
+        addTry(try, "os_windous")
+      elseif os == "OS X" or os == "iOS" then
+        addTry(try, "os_mak")
+      elseif os == "Linux" then
+        addTry(try, "os_linx")
+      elseif os == "Android" then
+        addTry(try, "os_androd")
+      end
+    elseif name == "ui_gui" then
+      local os = love.system.getOS()
+      if os == "Windows" then
+        addTry(try, "ui_win")
+      elseif os == "OS X" or os == "iOS" then
+        addTry(try, "ui_cmd")
+      else
+        addTry(try, "ui_win")
+      end
+    elseif name == "ui_cap" then
+      if capslock then
+        addTry(try, "ui_cap_on")
+      else
+        addTry(try, "ui_cap_off")
+      end
+    end
+
+    if o.sleep then
+      addTry(try, "?_slep", true)
+    end
+
+    if tile.wobble then
+      local wobble_frame = (o.wobble + anim_stage) % 3 + 1
+      addTry(try, "?_"..wobble_frame, true)
+    end
+  end
+  for _,try_name in ipairs(try) do
+    if sprites[try_name] then
+      return sprites[try_name], try_name
+    end
+  end
+  return sprites["wat"], "wat"
+end
+
+function getTileSprites(tile)
+  local sprites = {}
+  for i,sprite in ipairs(tile.sprite) do
+    local _,name = getTileSprite(sprite, tile)
+    sprites[i] = name
+  end
+  return sprites
+end
+
+function getTileColor(tile, index, override)
+  if index then
+    if override and tile.painted[index] then
+      return deepCopy(override)
+    else
+      return deepCopy(tile.color[index])
+    end
+  else
+    for i,color in ipairs(tile.color) do
+      if tile.painted[i] then
+        return getTileColor(tile, i, override)
+      end
+    end
+    return deepCopy(tile.color[1])
+  end
+end
+
+function getTileColors(tile, override)
+  local colors = {}
+  for i = 1, #tile.color do
+    colors[i] = getTileColor(tile, i, override)
+  end
+  return colors
+end
+
+function getUnitSprite(name, unit)
+  local try = {name}
+  if unit then
+    -- lvl stuff
+    if name == "lvl" and unit.special.visibility == "hidden" then
+      addTry(try, "lvl_hidden")
+    elseif name == "lvl" and (unit.special.visibility == "locked" or unit.special.visibility == nil) then
+      addTry(try, "lvl_locked")
+    elseif name == "lvl" and scene == game and unit.special.level and readSaveFile{"levels", unit.special.level, "won"} then
+      addTry(try, "lvl_won")
+    -- lin stuff
+    elseif name == "lin" and unit.special.pathlock and unit.special.pathlock ~= "none" then
+      addTry(try, "lin_gate")
+    elseif name == "lin" and unit.special.visibility == "hidden" then
+      addTry(try, "lin_hidden")
+    -- overlay properties
+    elseif name == "txt/gay-colored" and not unit.active then
+      addTry(try, "txt/gay")
+    elseif name == "txt/tranz-colored" and not unit.active then
+      addTry(try, "txt/tranz")
+    elseif name == "txt/enby-colored" and not unit.active then
+      addTry(try, "txt/enby")
+    -- misc
+    elseif name == "txt/now" and doing_past_turns then
+      addTry(try, "txt/latr")
+    end
+
+    for type,name in pairs(unit.sprite_transforms) do
+      if table.has_value(unit.used_as, type) then
+        addTry(try, name)
+        break
+      end
+    end
+  end
+
+  return getTileSprite(name, unit and getTile(unit.tile), {
+    try = try,
+    wobble = unit and unit.frame or 0,
+    sleep = unit and graphical_property_cache["slep"][unit]
+  })
+end
+
+function getUnitSprites(unit)
+  local sprites = {}
+  for i,sprite in ipairs(unit.sprite) do
+    local _,name = getUnitSprite(sprite, unit)
+    sprites[i] = name
+  end
+  return sprites
+end
+
+function getUnitColor(unit, index, override_)
+  local override = override_ or unit.color_override
+  
+  if index then
+    if not override and unit.name == "lin" and unit.special.pathlock and unit.special.pathlock ~= "none" then
+      return {2, 2}
+    elseif unit.sprite[i] == "detox" and graphical_property_cache["slep"][unit] ~= nil then
+      return {1, 2}
+    else
+      return getTileColor(getTile(unit.tile), index, override)
+    end
+  else
+    for i,color in ipairs(unit.color) do
+      if unit.painted[i] then
+        return getUnitColor(unit, i, override)
+      end
+    end
+    return getUnitColor(getTile(unit.tile), 1, override)
+  end
+end
+
+function getUnitColors(unit, override_)
+  local colors = {}
+  for i = 1, #unit.color do
+    colors[i] = getUnitColor(unit, i, override_)
+  end
+  return colors
+end
+
+function drawTileSprite(tile, x, y, rotation, sx, sy, o)
+  local o = getTableWithDefaults(copyTable(o or {}), {
+    sprite = getTileSprites(tile),
+    color = getTileColors(tile),
+    painted = tile.painted,
+    meta = tile.meta,
+    nt = tile.nt,
+    wobble = tile.wobble,
+    really_smol = tile.name == "babby",
+    lvl = tile.name == "lvl",
+  })
+  drawSprite(x, y, rotation, sx, sy, o)
+end
+
+function drawUnitSprite(unit, x, y, rotation, sx, sy, o)
+  local brightness = 1
+
+  if scene == game then
+    if ((unit.type == "text" and not hasRule(unit,"ben't","wurd")) or hasRule(unit,"be","wurd")) and not unit.active and not level_destroyed and not (unit.fullname == "prop") then
+      brightness = 0.33
+    end
+    if (unit.name == "steev") and not hasU(unit) then
+      brightness = 0.33
+    end
+    if unit.name == "casete" and not hasProperty(unit, "nogo") then
+      brightness = 0.5
+    end
+    if timeless and not hasProperty(unit,"zawarudo") and not (unit.type == "text") then
+      brightness = 0.33
+    end
+  end
+
+  local o = getTableWithDefaults(copyTable(o or {}), {
+    sprite = getUnitSprites(unit),
+    color = getUnitColors(unit),
+    painted = unit.painted,
+    special = unit.special,
+    overlay = unit.overlay,
+    meta = unit.meta,
+    nt = unit.nt,
+    brightness = brightness,
+    id = unit.id,
+    wobble = unit.wobble,
+    delet = unit.delet,
+    really_smol = unit.fullname == "babby",
+    lvl = unit.fullname == "lvl",
+  })
+  drawSprite(x, y, rotation, sx, sy, o)
+end
+
+function drawSprite(x, y, rotation, sx, sy, o)
+  local o = getTableWithDefaults(copyTable(o or {}), {
+    sprite = {},
+    color = {},
+    painted = {},
+    special = {},
+    overlay = {},
+    meta = 0,
+    nt = false,
+    alpha = 1,
+    brightness = 1,
+    id = 0,
+    wobble = false,
+    delet = false,
+    really_smol = false,
+    lvl = false,
+  })
+
+  local max_w, max_h = 0, 0
+  local is_lvl = false
+
+  for _,image in ipairs(o.sprite) do
+    local sprite = sprites[image]
+    max_w = math.max(max_w, sprite:getWidth())
+    max_h = math.max(max_h, sprite:getHeight())
+  end
+
+  local function setColor(color, brightness)
+    if #color == 3 then
+      if color[1] then
+        color = {color[1]/255, color[2]/255, color[3]/255, 1}
+      else
+        color = {1,1,1,1}
+      end
+    else
+      local palette = current_palette
+      if current_palette == "default" and o.wobble then
+        palette = "baba"
+      end
+      color = {getPaletteColor(color[1], color[2], palette)}
+    end
+
+    local bg_color = {getPaletteColor(1, 0)}
+
+    -- multiply brightness by darkened bg color
+    for i,c in ipairs(bg_color) do
+      if i < 4 then
+        color[i] = (1 - o.brightness) * (bg_color[i] * 0.5) + o.brightness * color[i]
+      end
+    end
+
+    love.graphics.setColor(color[1], color[2], color[3], color[4]*o.alpha)
+
+    return color
+  end
+
+  local function drawSpriteMaybeOverlay(overlay, onlycolor, stretch)
+    if overlay and stretch then
+      love.graphics.setColor(1,1,1,1)
+      local sprite = sprites[overlay]
+      love.graphics.draw(sprite, x, y, rotation, max_w / TILE_SIZE, max_h / TILE_SIZE, sprite:getWidth() / 2, sprite:getHeight() / 2)
+    else
+      if overlay then
+        local sprite = sprites[overlay]
+        love.graphics.draw(sprite, x, y, rotation, sx, sy, sprite:getWidth() / 2, sprite:getHeight() / 2)
+      else
+        for i,image in ipairs(o.sprite) do
+          setColor(o.color[i])
+          if onlycolor or (#o.overlay > 0 and o.painted[i]) then
+            love.graphics.setColor(1,1,1,1)
+          end
+          if not onlycolor or o.painted[i] then
+            if image == "letter_custom" then
+              if o.special.customletter then
+                drawCustomLetter(o.special.customletter, x, y, rotation, sx, sy, 16, 16)
+              else
+                local sprite = sprites["wut"]
+                love.graphics.draw(sprites["wut"], x, y, rotation, sx, sy, sprite:getWidth() / 2, sprite:getHeight() / 2)
+              end
+            else
+              local sprite = sprites[image]
+              love.graphics.draw(sprite, x, y, rotation, sx, sy, sprite:getWidth() / 2, sprite:getHeight() / 2)
+            end
+          end
+        end
+      end
+    end
+  end
+
+  if (o.delet or spookmode) and (math.floor(love.timer.getTime() * 9) % 9 == 0) then -- if we're delet, apply the special shader to our object
+    pcallSetShader(xwxShader)
+    drawSpriteMaybeOverlay()
+    love.graphics.setShader()
+  else
+    drawSpriteMaybeOverlay()
+  end
+
+  if o.lvl and (scene == editor or (scene ~= editor and o.special.visibility == "open")) then
+    local first_color = o.color[1]
+    for i,color in ipairs(o.color) do
+      if o.painted[i] then
+        first_color = color
+        break
+      end
+    end
+    love.graphics.push()
+    love.graphics.translate(x, y)
+    love.graphics.rotate(rotation)
+    love.graphics.translate(-x, -y)
+    setColor(first_color)
+    if (scene ~= editor and readSaveFile{"levels", o.special.level, "won"}) or (scene == editor and o.special.visibility ~= "open") then
+      local r,g,b,a = love.graphics.getColor()
+      love.graphics.setColor(r,g,b,a*0.4)
+    end
+    if not o.special.iconstyle or o.special.iconstyle == "number" then
+      local num = tostring(o.special.number or 1)
+      if #num == 1 then
+        num = "0"..num
+      end
+      love.graphics.draw(sprites["levelicon_"..num:sub(1,1)], x+(4*sx), y+(4*sy), 0, sx, sy, max_w / 2, max_h / 2)
+      love.graphics.draw(sprites["levelicon_"..num:sub(2,2)], x+(16*sx), y+(4*sy), 0, sx, sy, max_w / 2, max_h / 2)
+    elseif o.special.iconstyle == "dots" then
+      local num = tostring(o.special.number or 1)
+      love.graphics.draw(sprites["levelicon_dots_"..num], x+(4*sx), y+(4*sy), 0, sx, sy, max_w / 2, max_h / 2)
+    elseif o.special.iconstyle == "letter" then
+      local num = o.special.number or 1
+      local letter = ("abcdefghijklmnopqrstuvwxyz"):sub(num, num)
+      love.graphics.draw(sprites["letter_"..letter], x, y, 0, sx*3/4, sy*3/4, max_w / 2, max_h / 2)
+    elseif o.special.iconstyle == "other" then
+      local sprite = sprites[o.special.iconname or "wat"] or sprites["wat"]
+      love.graphics.draw(sprite, x, y, 0, sx*3/4, sy*3/4, sprite:getWidth() / 2, sprite:getHeight() / 2)
+    end
+    love.graphics.pop()
+  end
+
+  if #o.overlay > 0 then
+    local function overlayStencil()
+      pcallSetShader(mask_shader)
+      drawSpriteMaybeOverlay(nil,true)
+      if o.really_smol then
+        love.graphics.translate(x, y)
+        love.graphics.scale(0.75, 0.5)
+        love.graphics.translate(-x, -y)
+      end
+      love.graphics.setShader()
+    end
+    for _,overlay in ipairs(o.overlay) do
+      love.graphics.push()
+      love.graphics.setColor(1, 1, 1)
+      love.graphics.stencil(overlayStencil, "replace")
+      local old_test_mode, old_test_value = love.graphics.getStencilTest()
+      love.graphics.setStencilTest("greater", 0)
+      love.graphics.setBlendMode("multiply", "premultiplied")
+      drawSpriteMaybeOverlay("overlay/" .. overlay, false, true)
+      love.graphics.setBlendMode("alpha", "alphamultiply")
+      love.graphics.setStencilTest(old_test_mode, old_test_value)
+      love.graphics.pop()
+    end
+  end
+
+  if o.meta > 0 then
+    setColor{4, 1}
+    local metasprite = o.meta == 2 and sprites["meta2"] or sprites["meta1"]
+    love.graphics.draw(metasprite, x, y, 0, sx, sy, max_w / 2, max_h / 2)
+    if o.meta > 2 and sx == 1 and sy == 1 then
+      love.graphics.printf(tostring(o.meta), x-1, y+6, 32, "center")
+    end
+  end
+  if o.nt then
+    setColor{2, 2}
+    local ntsprite = sprites["n't"]
+    love.graphics.draw(ntsprite, x, y, 0, sx, sy, max_w / 2, max_h / 2)
+  end
+  if displayids then
+    setColor{1, 4}
+    love.graphics.printf(tostring(o.id), x-3, y-18, 32, "center")
+  end
 end

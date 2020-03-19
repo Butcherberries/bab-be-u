@@ -1,4 +1,5 @@
 order of the things (because consistency is important):
+id
 name
 display
 sprite
@@ -13,7 +14,9 @@ txtify
 thingify
 wobblify
 babify
+convertible
 rotate
+portal
 wobble
 features (hatt, which, sant, bowie, gang, sans, cool, katany, knif, gunne, slippers)
 voice
@@ -21,6 +24,7 @@ desc
 alias
 tags
 pronouns
+old ids
 
 layer notes:
 1: bordr, and nothing else
