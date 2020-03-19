@@ -167,7 +167,9 @@ function findUnit(words, extra_words_, dir, outer, no_verb_cond, is_subject)
   end
   
   local first_infix = true
-  while words[1] and words[1].type and (words[1].type.cond_infix or (words[1].type.direction and words[2] and words[2].name == "arond")) and (first_infix or enclosed) and (not no_verb_cond or not words[1].type.verb) do
+  while words[1] and words[1].type and
+  (words[1].type.cond_infix or (words[1].type.direction and words[2] and (words[2].name == "arond" or words[2].name == "meow")))
+  and (first_infix or enclosed) and (not no_verb_cond or not words[1].type.verb) do
     local infix = copyTable(words[1])
     local infix_orig = infix
     infix.mods = infix.mods or {}
@@ -175,16 +177,20 @@ function findUnit(words, extra_words_, dir, outer, no_verb_cond, is_subject)
       infix.name = infix.name.." arond"
       table.insert(infix.mods, words[2])
     end
+    if words[1].type.direction and words[2].name == "meow" then
+      infix.name = infix.name.." meow"
+      table.insert(infix.mods, words[2])
+    end
     table.remove(words, 1)
-    if words[1] and words[1].name == "arond" then
+    if words[1] and (words[1].name == "arond" or words[1].name == "meow") then
       table.remove(words, 1)
     end
     if #words == 0 then break end
     if infix.type.cond_infix_verb then
       local words_ = copyTable(words)
       if infix.type.cond_infix_verb_plus then
-        local verb = infix.name:sub(6)
-        table.insert(words_, 1, {name = verb, type = tiles_list[tiles_by_name["text_"..verb]].texttype})
+        local verb = infix.name:sub(5)
+        table.insert(words_, 1, {name = verb, type = tiles_list[tiles_by_name["txt_"..verb]].texttype})
       end
       local verb
       verb_phrase, words_ = findVerbPhrase(words_, extra_words, dir, enclosed, true)
@@ -301,7 +307,7 @@ function findClass(words)
   if words[2] and (words[2].name == "text" or words[2].name == "textn't") then
     table.insert(unit.mods, words[2])
     if (unit.name ~= unit.unit.textname) then --many letters in a row
-      unit.name = "text_"..unit.name..words[2].name:sub(5)
+      unit.name = "txt_"..unit.name..words[2].name:sub(5)
     else --every other case
       unit.name = (unit.unit or {fullname = "no unit"}).fullname..words[2].name:sub(5)
     end
@@ -449,7 +455,7 @@ function findLetterSentences(str, index_, sentences_, curr_sentence_, start_) --
         start = true
       end
       local sto_sentence = copyTable(curr_sentence)
-      for j=1,1 do --set above 1 if you wanna try full asterisks support
+      for j=1,99 do --set above 1 if you wanna try full asterisks support
         --print("j="..j.."("..temp_text_list[substr][j]..")")
         if text_in_tiles[substr] then table.insert(curr_sentence, text_in_tiles[substr])
         else --something different needs to be done here but idk what
@@ -514,7 +520,7 @@ local function testParser()
       {name = "keek", type = "object"}
     },
     { -- Test 5 - TRUE
-      {name = "bab", type = "object", unit = {fullname = "text_bab"}},
+      {name = "bab", type = "object", unit = {fullname = "txt_bab"}},
       {name = "text", type = "object"},
       {name = "&", type = "and"},
       {name = "keek", type = "object"},
@@ -528,7 +534,7 @@ local function testParser()
       {name = "u", type = "property"}
     },
     { -- Test 7 - TRUE
-      {name = "bab", type = "object", unit = {fullname = "text_bab"}},
+      {name = "bab", type = "object", unit = {fullname = "txt_bab"}},
       {name = "text", type = "object"},
       {name = "be", type = "verb_all"},
       {name = "u", type = "property"}
@@ -539,7 +545,7 @@ local function testParser()
       {name = "u", type = "property"}
     },
     { -- Test 9 - TRUE
-      {name = "be", type = "property", unit = {fullname = "text_be"}},
+      {name = "be", type = "property", unit = {fullname = "txt_be"}},
       {name = "text", type = "object"},
       {name = "be", type = "verb_all"},
       {name = "u", type = "property"}

@@ -227,15 +227,13 @@ function scene.update(dt)
 
   --TODO: PERFORMANCE: If many things are producing particles, it's laggy as heck.
   scene.doPassiveParticles(dt, ":)", "bonus", 0.25, 1, 1, {2, 4})
-  scene.doPassiveParticles(dt, ";d", "unwin", 0.25, 1, 1, {1, 2})
+  scene.doPassiveParticles(dt, "un:)", "unwin", 0.25, 1, 1, {1, 2})
+  scene.doPassiveParticles(dt, "nxt", "nxt", 0.25, 1, 1, {0, 3})
   scene.doPassiveParticles(dt, ":o", "bonus", 0.5, 0.8, 1, {4, 1})
   scene.doPassiveParticles(dt, "qt", "love", 0.25, 0.5, 1, {4, 2})
   scene.doPassiveParticles(dt, "slep", "slep", 1, 0.33, 1, {0, 3})
   scene.doPassiveParticles(dt, "thonk", "thonk", 0.25, 0.5, 1, {0, 3})
-  scene.doPassiveParticles(dt, ":/", "bonus", 0.25, 0.25, 1, {3, 3})
-  scene.doPassiveParticles(dt, "no undo", "bonus", 0.25, 0.25, 1, {5, 3})
-  scene.doPassiveParticles(dt, "undo", "bonus", 0.25, 0.25, 1, {6, 1})
-  scene.doPassiveParticles(dt, "brite", "bonus", 0.25, 0.25, 1, {2, 4})
+  scene.doPassiveParticles(dt, "tryagain", "bonus", 0.25, 0.25, 1, {3, 3})
 	
   doReplay(dt)
   if rules_with and rules_with["rythm"] then
@@ -790,40 +788,40 @@ function scene.draw(dt)
       brightness = 0.33
     end
     
-    if unit.name == "casete" and not hasProperty(unit, "no go") then
+    if unit.name == "casete" and not hasProperty(unit, "nogo") then
       brightness = 0.5
     end
     
-    if timeless and not hasProperty(unit,"za warudo") and not (unit.type == "text") then
+    if timeless and not hasProperty(unit,"zawarudo") and not (unit.type == "text") then
       brightness = 0.33
     end
 
-    if unit.fullname == "text_gay" then
+    if unit.fullname == "txt_gay" then
       if unit.active then
-        unit.sprite = "text_gay-colored"
+        unit.sprite = "text/gay-colored"
       else
-        unit.sprite = "text_gay"
+        unit.sprite = "text/gay"
       end
     end
-    if unit.fullname == "text_tranz" then
+    if unit.fullname == "txt_tranz" then
       if unit.active then
-        unit.sprite = "text_tranz-colored"
+        unit.sprite = "text/tranz-colored"
       else
-        unit.sprite = "text_tranz"
+        unit.sprite = "text/tranz"
       end
     end
-    if unit.fullname == "text_enby" then
+    if unit.fullname == "txt_enby" then
       if unit.active then
-        unit.sprite = "text_enby-colored"
+        unit.sprite = "text/enby-colored"
       else
-        unit.sprite = "text_enby"
+        unit.sprite = "text/enby"
       end
     end
-    if unit.fullname == "text_now" then
+    if unit.fullname == "txt_now" then
       if doing_past_turns then
-        unit.sprite = "text_latr"
+        unit.sprite = "text/latr"
       else
-        unit.sprite = "text_now"
+        unit.sprite = "text/now"
       end
     end
 
@@ -953,7 +951,7 @@ function scene.draw(dt)
       fulldrawy = fulldrawy - math.sin(love.timer.getTime())*5*flyenes
     end
     
-    if unit.fullname == "text_temmi" and unit.active then
+    if unit.fullname == "txt_temmi" and unit.active then
       local range = 0.5
       fulldrawx = fulldrawx + math.random(-range, range)
       fulldrawy = fulldrawy + math.random(-range, range)
@@ -970,7 +968,7 @@ function scene.draw(dt)
           if rules_list then
             for _,rules in ipairs(rules_list) do
               for _,rule_unit in ipairs(rules.units) do
-                if rule_unit.fullname == "text_temmi" then
+                if rule_unit.fullname == "txt_temmi" then
                   do_vibrate = true
                   break
                 end
@@ -1026,14 +1024,22 @@ function scene.draw(dt)
         if overlay and stretch then
           love.graphics.draw(draw, fulldrawx + ox, fulldrawy + oy, 0, sprite:getWidth() / TILE_SIZE, sprite:getHeight() / TILE_SIZE, draw:getWidth() / 2, draw:getHeight() / 2)
         else
-          if unit.fullname == "detox" and graphical_property_cache["slep"][unit] ~= nil then
-            setColor{1,2}
+          if unit.sprite == "letter_custom" then
+            if unit.special.customletter then
+              drawCustomLetter(unit.special.customletter, fulldrawx + ox, fulldrawy + oy, 0, unit.draw.scalex, unit.draw.scaley, 16, 16)
+            else
+              love.graphics.draw(sprites["wut"], fulldrawx + ox, fulldrawy + oy, 0, unit.draw.scalex, unit.draw.scaley, draw:getWidth() / 2, draw:getHeight() / 2)
+            end
+          else
+            if unit.fullname == "detox" and graphical_property_cache["slep"][unit] ~= nil then
+              setColor{1,2}
+            end
+            if unit.fullname == "txt_wontn't" then
+              draw = sprites["text/wo"]
+            end
+            if not draw then draw = sprites["wat"] end
+            love.graphics.draw(draw, fulldrawx + ox, fulldrawy + oy, 0, unit.draw.scalex, unit.draw.scaley, draw:getWidth() / 2, draw:getHeight() / 2)
           end
-          if unit.fullname == "text_wontn't" then
-            draw = sprites["text_wo"]
-          end
-          if not draw then draw = sprites["wat"] end
-          love.graphics.draw(draw, fulldrawx + ox, fulldrawy + oy, 0, unit.draw.scalex, unit.draw.scaley, draw:getWidth() / 2, draw:getHeight() / 2)
         end
       end
 			if unit.meta ~= nil then
@@ -1048,7 +1054,7 @@ function scene.draw(dt)
 				end
 				setColor(unit.color)
 			end
-      if unit.nt ~= nil and unit.fullname ~= "text_wontn't" then
+      if unit.nt ~= nil and unit.fullname ~= "txt_wontn't" then
         setColor({2, 2})
         local ntsprite = sprites["n't"]
         love.graphics.draw(ntsprite, fulldrawx, fulldrawy, 0, unit.draw.scalex, unit.draw.scaley, sprite:getWidth() / 2, sprite:getHeight() / 2)
@@ -1154,11 +1160,11 @@ function scene.draw(dt)
       love.graphics.setColor(ur, ug, ub, ua)
     end
 
-    if not (unit.xwx or spookmode) and unit.name ~= "lin" and unit.fullname ~= "letter_custom" then -- xwx takes control of the drawing sprite, so it shouldn't render the normal object
+    if not (unit.delet or spookmode) and unit.name ~= "lin" then -- delet takes control of the drawing sprite, so it shouldn't render the normal object
       drawSprite()
     end
 
-    if unit.xwx or spookmode then -- if we're xwx, apply the special shader to our object
+    if unit.delet or spookmode then -- if we're delet, apply the special shader to our object
       if math.floor(love.timer.getTime() * 9) % 9 == 0 then
         pcallSetShader(xwxShader)
         drawSprite()
@@ -1591,8 +1597,13 @@ function scene.draw(dt)
         else
           love.graphics.setColor(dcolor[1], dcolor[2], dcolor[3], dcolor[4] or 1)
         end
-        if unit.fullname == "letter_custom" then
-          drawCustomLetter(unit.special.customletter, 0, 0, 0, 1, 1, 16, 16)
+        if unit.sprite == "letter_custom" then
+          print(unit.sprite)
+          if unit.special.customletter then
+            drawCustomLetter(unit.special.customletter, 0, 0, 0, 1, 1, 16, 16)
+          else
+            love.graphics.draw(sprites["wut"], 0, 0, 0, 1, 1, sprite:getWidth() / 2, sprite:getHeight() / 2)
+          end
         else
           local sprite = sprites[unit.sprite]
           love.graphics.draw(sprite, 0, 0, 0, 1, 1, sprite:getWidth() / 2, sprite:getHeight() / 2)
@@ -1798,18 +1809,18 @@ function scene.draw(dt)
 
   if not pause then gooi.draw() end
   if is_mobile then
-    if rules_with["za warudo"] then
+    if rules_with["zawarudo"] then
       mobile_controls_timeless:setVisible(true)
       mobile_controls_timeless:setBGImage(sprites[timeless and "ui/time resume" or "ui/timestop"])
     else
       mobile_controls_timeless:setVisible(false)
     end
     if rules_with["u"] then
-      if rules_with["u too"] then
+      if rules_with["utoo"] then
           mobile_controls_p1:setVisible(true)
           mobile_controls_p2:setVisible(true)
           mobile_controls_p3:setVisible(true)
-        if rules_with["u tres"] then
+        if rules_with["utres"] then
           mobile_controls_p1:setBGImage(sprites["ui_1"])
           mobile_controls_p2:setBGImage(sprites["ui_2"])
           mobile_controls_p3:setBGImage(sprites["ui_3"])
@@ -1818,7 +1829,7 @@ function scene.draw(dt)
           mobile_controls_p2:setBGImage(sprites["ui_2"])
           mobile_controls_p3:setBGImage(sprites["ui_plus"])
         end
-      elseif rules_with["u tres"] then
+      elseif rules_with["utres"] then
         mobile_controls_p1:setVisible(true)
         mobile_controls_p2:setVisible(true)
         mobile_controls_p3:setVisible(true)
@@ -1830,7 +1841,7 @@ function scene.draw(dt)
         mobile_controls_p2:setVisible(false)
         mobile_controls_p3:setVisible(false)
       end
-    elseif rules_with["u too"] and rules_with["u tres"] then
+    elseif rules_with["utoo"] and rules_with["utres"] then
       mobile_controls_p1:setVisible(true)
       mobile_controls_p2:setVisible(true)
       mobile_controls_p3:setVisible(true)
@@ -1986,8 +1997,8 @@ function scene.draw(dt)
       if tfs then
         local tfstr = ""
         for _,tf in ipairs(tfs) do
-          while tf:starts("text_") do
-            tf = tf:sub(6)
+          while tf:starts("txt_") do
+            tf = tf:sub(5)
             tf = tf.." txt"
           end
           tfstr = tfstr.." & "..tf
@@ -2106,7 +2117,7 @@ function scene.checkInput()
         local end_time = love.timer.getTime()
         if not unit_tests then print("gameplay logic took: "..tostring(round((end_time-start_time)*1000)).."ms") end
         -- SING
-        if tiles_by_name["text_sing"] then
+        if tiles_by_name["txt_sing"] then
           
           local sing_rules = matchesRule(nil, "sing", "?")
           for _,ruleparent in ipairs(sing_rules) do
@@ -2120,7 +2131,10 @@ function scene.checkInput()
               source:setPitch(math.random() * ((2^(11/12)) - 1) + 1)
               source:play()
             else
-              local specific_sing = tiles_list[unit.tile].sing or "bit";
+              local specific_sing = "bit"
+              if unit.tile then
+                specific_sing = tiles_list[unit.tile].sing or specific_sing
+              end
               if (unit.name == "pata") then
                 specific_sing = "pata" .. tostring(unit.dir)
               end
@@ -2322,7 +2336,7 @@ function doOneMove(x, y, key, past)
   end
   
   if (key == "e") then
-		if hasProperty(nil,"za warudo") then
+		if hasProperty(nil,"zawarudo") then
       --[[
       level_shader = shader_zawarudo
       shader_time = 0
@@ -2336,7 +2350,7 @@ function doOneMove(x, y, key, past)
         end
         if firsttimestop then
           playSound("timestop long",0.5)
-          if units_by_name["za warudo"] then
+          if units_by_name["zawarudo"] then
             playSound("za warudo",0.5)
           end
         else
@@ -2350,14 +2364,14 @@ function doOneMove(x, y, key, past)
         if firsttimestop then
           playSound("time resume long",0.5)
           firsttimestop = false
-          if units_by_name["za warudo"] then
+          if units_by_name["zawarudo"] then
             playSound("time resume dio",0.5)
           end
         else
           playSound("time resume",0.5)
         end
       end
-      addUndo({"za warudo", timeless})
+      addUndo({"zawarudo", timeless})
       unsetNewUnits()
     else
       addUndo({"timeless_rules", rules_with, full_rules})
@@ -2373,13 +2387,13 @@ function doOneMove(x, y, key, past)
     if hasRule("press","f2",":)") then
       doWin("won")
     end
-    if hasRule("press","f2",":/") then
+    if hasRule("press","f2","tryagain") then
       doTryAgain()
     end
-    if hasRule("press","f2","xwx") then
+    if hasRule("press","f2","delet") then
       doXWX()
     end
-    if hasRule("press","f2",":>") then
+    if hasRule("press","f2","nxt") then
       doWin("nxt")
     end
 
@@ -2451,11 +2465,11 @@ function scene.doPassiveParticles(timer,word,effect,delay,chance,count,color)
         end
       end
       if not unit.stelth and particlesRngCheck() then
-        if word == ":)" and countProperty(unit,":)") > countProperty (unit,";d") then
+        if word == ":)" and countProperty(unit,":)") > countProperty (unit,"un:)") then
           addParticles(effect, unit.x, unit.y, color, real_count)
-        elseif word == ";d" and countProperty(unit,":)") < countProperty (unit,";d") then
+        elseif word == "un:)" and countProperty(unit,":)") < countProperty (unit,"un:)") then
           addParticles(effect, unit.x, unit.y, color, real_count)
-        elseif word ~= ":)" and word ~= ";d" then
+        elseif word ~= ":)" and word ~= "un:)" then
           addParticles(effect, unit.x, unit.y, color, real_count)
         end
       end
@@ -2633,14 +2647,14 @@ function scene.mouseReleased(x, y, button)
   
   if button == 1 then
     -- DRAGBL release
-    if units_by_name["text_dragbl"] then
+    if units_by_name["txt_dragbl"] then
       local dragged = false
       for _,unit in ipairs(drag_units) do
         local dest_x, dest_y = math.floor(unit.draw.x + 0.5), math.floor(unit.draw.y + 0.5)
         local stuff = getUnitsOnTile(dest_x,dest_y)
         local nodrag = false
         for _,other in ipairs(stuff) do
-          if hasProperty(other,"no drag") then
+          if hasProperty(other,"nodrag") then
             nodrag = true
             break
           end
@@ -2662,7 +2676,7 @@ function scene.mouseReleased(x, y, button)
       drag_units = {}
     end
     -- CLIKT prefix
-    if units_by_name["text_clikt"] then
+    if units_by_name["txt_clikt"] then
       last_click_x, last_click_y = screenToGameTile(love.mouse.getX(), love.mouse.getY())
       doOneMove(last_click_x,last_click_y,"clikt")
       last_click_x, last_click_y = nil, nil
@@ -2811,8 +2825,8 @@ function doDragbl()
       local oldx, oldy = math.floor(unit.draw.x), math.floor(unit.draw.y)
       local dirx, diry = sign(mx - unit.draw.x), sign(my - unit.draw.y)
       
-      if  canMove(unit,dirx,0,0,nil,nil,nil,"drag",nil,math.floor(unit.draw.x),math.floor(unit.draw.y))
-      and canMove(unit,dirx,0,0,nil,nil,nil,"drag",nil,math.floor(unit.draw.x),math.ceil( unit.draw.y)) then
+      if  canMove(unit,dirx,0,0,{reason = "drag", start_x = math.floor(unit.draw.x), start_y = math.floor(unit.draw.y)})
+      and canMove(unit,dirx,0,0,{reason = "drag", start_x = math.floor(unit.draw.x), start_y = math.ceil( unit.draw.y)}) then
         local diff = mx - unit.draw.x
         if diff < -0.25 then diff = -0.25 end
         if diff > 0.25 then diff = 0.25 end
@@ -2824,8 +2838,8 @@ function doDragbl()
           unit.draw.x = oldx
         end
       end
-      if  canMove(unit,0,diry,0,nil,nil,nil,"drag",nil,math.floor(unit.draw.x),math.floor(unit.draw.y))
-      and canMove(unit,0,diry,0,nil,nil,nil,"drag",nil,math.ceil( unit.draw.x),math.floor(unit.draw.y)) then
+      if  canMove(unit,0,diry,0,{reason = "drag", start_x = math.floor(unit.draw.x), start_y = math.floor(unit.draw.y)})
+      and canMove(unit,0,diry,0,{reason = "drag", start_x = math.ceil( unit.draw.x), start_y = math.floor(unit.draw.y)}) then
         local diff = my - unit.draw.y
         if diff < -0.25 then diff = -0.25 end
         if diff > 0.25 then diff = 0.25 end
