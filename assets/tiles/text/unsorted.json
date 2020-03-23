@@ -4,7 +4,7 @@
     "sprite": ["txt/and"],
     "types": ["and"],
     "color": [[0, 3]],
-    "desc": "&: Joins multiple conditions, subjects or objects together in a rule. Can also be spelled as ampersand with letters. Rules with stacked text and &s don't work like in baba, be sure to experiment!\nTry thingifying an &n't text, since no one would ever think to try that considering &n'ts are useless.",
+    "desc": "&: Joins multiple conditions, subjects or objects together in a rule. Can also be spelled as ampersand with letters. Rules with stacked text or n't and &s don't work like in baba, be sure to experiment!",
     "alias": ["ampersand"],
     "tags": ["and"]
   },
@@ -122,14 +122,6 @@
     "sprite": ["txt/every3"],
     "types": ["object"],
     "color": [[4, 1]],
-    "desc": "EVERY3: Absolutely everything conceivable. The pinnacle of everything technology. (Infloop is not an object.)",
-    "tags": ["all", "everyone", "every3"]
-  },
-  {
-    "name": "txt_every3",
-    "sprite": ["txt/every3"],
-    "types": ["object"],
-    "color": [[4, 1]],
     "desc": "EVERY3: Absolutely everything conceivable. The pinnacle of everything technology.",
     "tags": ["all", "everyone", "every3"]
   },
@@ -169,7 +161,7 @@
     "sprite": ["txt/gang"],
     "types": ["object", "group", "gang", "gang_prefix"],
     "color": [[0, 1]],
-    "desc": "GANG: A variant of FRENS but members wear an exclusive hat.",
+    "desc": "GANG: A variant of FRENS but members wear an exclusive hat. Put an object before it to make unique gangs!",
     "tags": ["group"]
   },
   {
@@ -236,7 +228,7 @@
     "sprite": ["txt/themself"],
     "types": ["object"],
     "color": [[2, 3]],
-    "desc": "ITSELF: Refers to the subject of the rule in conditions.",
+    "desc": "THEMSELF: Refers to the subject of the rule in conditions.",
     "tags": ["itself"]
   }
 ]

@@ -938,6 +938,7 @@ function getUs()
   mergeTable(yous,getUnitsWithEffect("utres"))
   mergeTable(yous,getUnitsWithEffect("you"))
   mergeTable(yous,getUnitsWithEffect("y'all"))
+  mergeTable(yous,getUnitsWithEffect("w"))
   return yous
 end
 
@@ -951,6 +952,13 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
     local condtype = cond.name
     local lists = {} -- for iterating
     local sets = {} -- for checking
+
+    local count = 1
+    if ( condtype:sub(-3) and tonumber( condtype:sub(-3) ) ) then
+      count = tonumber( condtype:sub(-3) )
+      condtype = condtype:sub(0,-4)
+    end --a lot of things don't actually work with count yet, but hey
+
     if condtype:starts("that") then
       lists = cond.others or {} -- using "lists" to store the names, since THAT doesn't allow nesting, and we need the name for hasRule
     elseif cond.others then
@@ -1061,14 +1069,14 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
     elseif condtype == "w/fren" then
       if unit == outerlvl then
         for _,other in ipairs(sets) do
-          local found = false
+          local found = 0
           for _,fren in ipairs(units) do
             if inBounds(fren.x,fren.y) and other[fren] then
-              found = true
-              break
+              found = found+1
+              if found >= count then break end
             end
           end
-          if not found then
+          if found < count then
             result = false
             break
           end
@@ -1091,18 +1099,18 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
         local frens = getUnitsOnTile(x, y, nil, false, unit, true, hasProperty(unit,"thicc"))
         for _,other in ipairs(sets) do
           if other[outerlvl] then
-            if not inBounds(unit.x,unit.y) then
+            if not inBounds(unit.x,unit.y) or count > 1 then
               result = false
             end
           else
-            local found = false
+            local found = 0
             for _,fren in ipairs(frens) do
               if other[fren] then
-                found = true
-                break
+                found = found+1
+                if found >= count then break end
               end
             end
-            if not found then
+            if found < count then
               result = false
               break
             end
@@ -1228,12 +1236,12 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
       end
       if unit == outerlvl then --basically turns into sans n't BUT the unit has to be looking inbounds as well!
         for _,param in ipairs(params) do
-          local found = false
+          local found = 0
           local others = findUnitsByName(param)
           for _,on in ipairs(others) do
             if inBounds(on.x + dirs8[on.dir][1], on.y + dirs8[on.dir][2]) then
-              found = true
-              break
+              found = found+1
+              if found >= count then break end
             end
           end
           if unit == outerlvl and surrounds ~= nil and surrounds_name == level_name then
@@ -1242,31 +1250,31 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
               for ny=-1,1 do
                 for __,on in ipairs(surrounds[nx][ny]) do
                   if nameIs(on, param) and nx + dirs8[on.dir][1] == 0 and ny + dirs8[on.dir][2] == 0 then
-                    found = true
-                    break
+                    found = found+1
+                    if found >= count then break end
                   end
                 end
               end
             end
           end
-          if not found then
+          if found < count then
             result = false
             break
           end
         end
       else
         for _,set in ipairs(sets) do
-          local found = false
+          local found = 0
           for _,other in ipairs(others) do
             if set[other] then
               local dx, dy, dir, px, py = getNextTile(other, dirs8[other.dir][1], dirs8[other.dir][2], other.dir)
               if px == unit.x and py == unit.y then
-                found = true
-                break
+                found = found+1
+                if found >= count then break end
               end
             end
           end
-          if not found then
+          if found < count then
             result = false
             break
           end
@@ -1315,14 +1323,14 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
                 break
               end
             else
-              local found = false
+              local found = 0
               for _,fren in ipairs(frens) do
                 if other[fren] then
-                  found = true
-                  break
+                  found = found+1
+                  if found >= count then break end
                 end
               end
-              if not found then
+              if found < count then
                 result = false
                 break
               end
@@ -1345,14 +1353,14 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
                 break
               end
           else
-            local found = false
+            local found = 0
             for _,fren in ipairs(frens) do
               if other[fren] then
-                found = true
-                break
+                found = found+1
+                if found >= count then break end
               end
             end
-            if not found then
+            if found < count then
               result = false
               break
             end
@@ -1379,12 +1387,12 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
       end
       if unit == outerlvl then --basically turns into sans n't BUT the unit's rear has to be looking inbounds as well!
         for _,param in ipairs(params) do
-          local found = false
+          local found = 0
           local others = findUnitsByName(param)
           for _,on in ipairs(others) do
             if inBounds(on.x + -dirs8[on.dir][1], on.y + -dirs8[on.dir][2]) then
-              found = true
-              break
+              found = found+1
+              if found >= count then break end
             end
           end
           if unit == outerlvl and surrounds ~= nil and surrounds_name == level_name then
@@ -1393,34 +1401,34 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
               for ny=-1,1 do
                 for __,on in ipairs(surrounds[nx][ny]) do
                   if nameIs(on, param) and nx + -dirs8[on.dir][1] == 0 and ny + -dirs8[on.dir][2] == 0 then
-                    found = true
-                    break
+                    found = found+1
+                    if found >= count then break end
                   end
                 end
               end
             end
           end
-          if not found then
+          if found < count then
             result = false
             break
           end
         end
       else
         for _,set in ipairs(sets) do
-          local found = false
+          local found = 0
           for _,other in ipairs(others) do
             if set[other] then
               local dx, dy, dir, px, py = getNextTile(other, -dirs8[other.dir][1], -dirs8[other.dir][2], other.dir)
               if px == unit.x and py == unit.y then
-                found = true
-                break
+                found = found+1
+                if found >= count then break end
               else
                 -- print(unit.x, unit.y)
                 -- print(px, py)
               end
             end
           end
-          if not found then
+          if found < count then
             result = false
             break
           end
@@ -1444,12 +1452,12 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
       end
       if unit == outerlvl then --basically turns into sans n't BUT the unit's side has to be looking inbounds as well!
         for _,param in ipairs(params) do
-          local found = false
+          local found = 0
           local others = findUnitsByName(param)
           for _,on in ipairs(others) do
             if inBounds(on.x - dirs8[on.dir][2], on.y + dirs8[on.dir][1]) or inBounds(on.x + dirs8[on.dir][2], on.y - dirs8[on.dir][1]) then
-              found = true
-              break
+              found = found+1
+              if found >= count then break end
             end
           end
           if unit == outerlvl and surrounds ~= nil and surrounds_name == level_name then
@@ -1458,32 +1466,32 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
               for ny=-1,1 do
                 for __,on in ipairs(surrounds[nx][ny]) do
                   if nameIs(on, param) and ((nx - dirs8[on.dir][2] == 0 and ny + dirs8[on.dir][1] == 0) or (nx + dirs8[on.dir][2] == 0 and ny - dirs8[on.dir][1] == 0)) then
-                    found = true
-                    break
+                    found = found+1
+                    if found >= count then break end
                   end
                 end
               end
             end
           end
-          if not found then
+          if found < count then
             result = false
             break
           end
         end
       else
         for _,set in ipairs(sets) do
-          local found = false
+          local found = 0
           for _,other in ipairs(others) do
             if set[other] then
               local dx, dy, dir, px, py = getNextTile(other, dirs8[other.dir][2], -dirs8[other.dir][1], other.dir)
               local dx, dy, dir, qx, qy = getNextTile(other, -dirs8[other.dir][2], dirs8[other.dir][1], other.dir)
               if px == unit.x and py == unit.y or qx == unit.x and qy == unit.y then
-                found = true
-                break
+                found = found+1
+                if found >= count then break end
               end
             end
           end
-          if not found then
+          if found < count then
             result = false
             break
           end
@@ -1491,7 +1499,7 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
       end
     elseif condtype == "sans" then
       for _,other in ipairs(lists) do
-        if #other > 1 or #other == 1 and other[1] ~= unit then
+        if #other > count or #other == count and other[1] ~= unit then
           result = false
           break
         end
@@ -1596,23 +1604,25 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
     elseif main_palette_for_colour[condtype] then
       if unit.fullname == "no1" then
         result = false
-      elseif unit.rave or unit.colrful or unit.gay then
+      elseif unit.rave or unit.colrful then
+        result = true
+      elseif unit.gay then
         if condtype == "blacc" or condtype == "whit" or condtype == "graey" or condtype == "brwn" then
           result = false
         else
           result = true
         end
       elseif unit.tranz then
-        if not (condtype == "cyeann" or condtype == "whit" or condtype == "pinc") then
-          result = false
-        else
+        if condtype == "cyeann" or condtype == "whit" or condtype == "pinc" then
           result = true
+        else
+          result = false
         end
       elseif unit.enby then
-        if not (condtype == "yello" or condtype == "whit" or condtype == "purp" or condtype == "blacc" or condtype == "graey") then
-          result = false
-        else
+        if condtype == "yello" or condtype == "whit" or condtype == "purp" or condtype == "blacc" or condtype == "graey" then
           result = true
+        else
+          result = false
         end
       else
         result = matchesColor(getUnitColors(unit), condtype)
@@ -2969,7 +2979,7 @@ function timecheckUs(unit)
   if timecheck(unit) then
     return true
   else
-    local to_check = {"u","utoo","utres","y'all"}
+    local to_check = {"u","utoo","utres","y'all","you","w"}
     for _,prop in ipairs(to_check) do
       local rulecheck = matchesRule(unit,"be",prop)
       for _,ruleparent in ipairs(rulecheck) do
@@ -3494,27 +3504,8 @@ function getTheme()
       return "christmas"
     end
   end
-  local palettes = {
-    "abstract",
-    "autumn",
-    "cauliflower",
-    "cyberpunk",
-    "default",
-    "edge",
-    "factory",
-    "garden",
-    "greenfault",
-    "mountain",
-    "ocean",
-    "redfault",
-    "ruins",
-    "snowy",
-    "space",
-    "swamp",
-    "variant",
-    "volcano",
-  }
-  return palettes[menu_palette]
+  
+  return menu_palette
 end
 
 function getTableWithDefaults(o, default)
@@ -4286,4 +4277,29 @@ function addGroup(name, subset)
       table.insert(group_subsets[subset], name)
     end
   end
+end
+
+function findNumber(unit1,unit2,unit3)
+  -- Works assuming you're doing a check from the LEFT to the RIGHT. This means the first number given must be a number!
+  -- If a later unit is not a number, it will simply end the number parsing there and immediately go on.
+  -- Does not support custom letters because i'm bad.
+  -- Second return number is the amount of digits that were valid, in case that's relevant.
+
+  local findDigit = function(unit)
+    --print(fullDump(unit))
+    if unit and unit.type and unit.type.letter and unit.name then
+      --print("name"..unit.name)
+      return tonumber( unit.name )
+    end
+  end
+
+  --if unit.special and unit.special.customletter then return tonumber(unit.special.customletter) end
+  local t1 = findDigit(unit1)
+  if not t1 then return nil end
+  local t2 = findDigit(unit2)
+  if not t2 then return t1,1 end
+  local t3 = findDigit(unit3)
+  if not t3 then return t1..t2,2 end
+
+  return t1..t2..t3,3
 end
