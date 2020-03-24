@@ -3359,7 +3359,7 @@ end
 
 function serializeWord(word)
   if word.unit and hasProperty(word.unit, "stelth") then return "" end
-  local name = word.name
+  local name = word.unit and word.unit.display or word.name
   while name:starts("txt_") do
     name = name:sub(5).." txt"
   end
@@ -4041,11 +4041,6 @@ function drawTileSprite(tile, x, y, rotation, sx, sy, o)
     really_smol = tile.name == "babby",
     lvl = tile.name == "lvl",
   })
-  if tile.name == "therealbabdictator" and scene == editor and selector_open then
-    o.sprite = {"miku_shirt", "miku_skin", "miku_black", "miku_blue", "miku_red"}
-    o.color = {{0, 2}, {0, 3}, {0, 1}, {1, 4}, {2, 2}}
-    o.painted = {false, false, false, true, false}
-  end
   drawSprite(x, y, rotation, sx, sy, o)
 end
 
