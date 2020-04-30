@@ -25,7 +25,7 @@ function scene.load()
   metaClear()
   clear()
   was_using_editor = false
-  resetMusic(current_music, 0.8)
+  resetMusic(current_music, 0.5)
   selected_levels = {}
   scene.selecting = true
   scene.buildUI()
@@ -111,6 +111,12 @@ function scene.keyPressed(key)
       selected_level = nil
       sub_worlds = old_world.sub_worlds
     elseif world ~= "" then
+      if loaded_custom_assets then
+        unloadMod()
+        assets.clear()
+        assets.load("assets")
+        loaded_custom_assets = false
+      end
       world_parent = ""
       world = ""
       scene.buildUI()
@@ -613,7 +619,7 @@ function scene.searchDir(dir, type)
 
   local filtered = filter(dirs, function(file)
     if type == "world" then
-      return love.filesystem.getInfo(dir .. "/" .. file) and love.filesystem.getInfo(dir .. "/" .. file).type == "directory"
+      return file ~= "assets" and love.filesystem.getInfo(dir .. "/" .. file) and love.filesystem.getInfo(dir .. "/" .. file).type == "directory"
     elseif type == "level" then
       return file:ends(".bab")
     end
@@ -755,6 +761,11 @@ function scene.selectWorld(o, button)
       if world == "" then
         world = o:getName()
         world_parent = o.data.file
+        if love.filesystem.getInfo(getWorldDir(true) .. "/" .. "assets") then
+          assets.load(getWorldDir(true) .. "/" .. "assets")
+          loadMod()
+          loaded_custom_assets = true
+        end
       else
         table.insert(sub_worlds, o:getName())
       end

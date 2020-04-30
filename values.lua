@@ -36,7 +36,7 @@ defaultsettings = {
   scribble_anim = true,
   light_on = true,
   epileptic = false,
-  game_scale = "auto",
+  int_scaling = true,
   grid_lines = false,
   mouse_lines = false,
   stopwatch_effect = true,
@@ -125,10 +125,10 @@ TILE_SIZE = 32
 mapwidth = 21
 mapheight = 15
 
-map_music = "bab be go"
+map_music = "map"
 map_ver = 1
 
-default_map = '{"width":21,"version":5,"extra":false,"author":"","compression":"zlib","background_sprite":"","height":15,"next_level":"","puffs_to_clear":0,"parent_level":"","is_overworld":false,"palette":"default","music":"bab be go","name":"new level","map":"eJyNkUEKgzAQRa8i7gpZdGKrtpKziJqxBIJKjKCId2+SFu2mJotk9d7nM5/3keybSkYlW1ctJLJYz7qsqzomMwMiuPkW88YBG1FJtm6EC8VgI784Wppamp7T32CHJgbNzoMnCycWvvlbDArH0QoPK9yNkJ4LLd3p1N+FIhd6FzIj5IF9wN0xDygEB/4IaDRIXA4Drv5OrexfzsicEbwt5I73rLunf+iAgZ8Xx7uTwp+Nt0KhnlQXlQV2/A10B+gd"}'
+default_map = '{"width":21,"version":5,"extra":false,"author":"","compression":"zlib","background_sprite":"","height":15,"next_level":"","puffs_to_clear":0,"parent_level":"","is_overworld":false,"palette":"default","music":"map","name":"new level","map":"eJyNkUEKgzAQRa8i7gpZdGKrtpKziJqxBIJKjKCId2+SFu2mJotk9d7nM5/3keybSkYlW1ctJLJYz7qsqzomMwMiuPkW88YBG1FJtm6EC8VgI784Wppamp7T32CHJgbNzoMnCycWvvlbDArH0QoPK9yNkJ4LLd3p1N+FIhd6FzIj5IF9wN0xDygEB/4IaDRIXA4Drv5OrexfzsicEbwt5I73rLunf+iAgZ8Xx7uTwp+Nt0KhnlQXlQV2/A10B+gd"}'
 
 main_palette_for_colour = {
 blacc = {0, 4},
@@ -189,6 +189,93 @@ colour_for_palette[6][1] = "brwn"
 colour_for_palette[6][2] = "brwn"
 colour_for_palette[6][3] = "brwn"
 colour_for_palette[6][4] = "blacc"
+
+--anti replacements for easy words
+anti_word_replacements = {
+  stubbn = "shy...",
+  ["shy..."] = "stubbn",
+  nogo = "icyyyy",
+  goawaypls = "comepls",
+  comepls = "goawaypls",
+  haetskye = "haetflor",
+  haetflor = "haetskye",
+  diag = "ortho",
+  ortho = "diag",
+  turncornr = "folowal",
+  folowal = "turncornr",
+  rotatbl = "noturn",
+  noturn = "rotatbl",
+  right = "left",
+  downright = "upleft",
+  down = "up",
+  downleft = "upright",
+  left = "right",
+  upleft = "downright",
+  up = "down",
+  upright = "downleft",
+  thicc = "babby",
+  [":)"] = "un:)",
+  ["un:)"] = ":)",
+  nedkee = "fordor",
+  fordor = "nedkee",
+  hotte = "fridgd",
+  fridgd = "hotte",
+  cool = "hotte",
+  thingify = "txtify",
+  txtify = "thingify",
+  notranform = "tranz",
+  noundo = "undo",
+  undo = "noundo",
+  brite = "tranparnt",
+  tranparnt = "brite",
+  reed = "cyeann",
+  orang = "bleu",
+  yello = "purp",
+  grun = "pinc",
+  cyeann = "reed",
+  bleu = "orang",
+  purp = "yello",
+  pinc = "grun",
+  whit = "blacc",
+  graey = "graey",
+  blacc = "whit",
+  brwn = "cyeann",
+  creat = "snacc",
+  snacc = "creat",
+  liek = "haet",
+  haet = "liek",
+  lookat = "lookaway",
+  lookaway = "lookat",
+  corekt = "rong",
+  rong = "corekt",
+  seenby = "behind",
+  behind = "seenby",
+}
+
+anti_word_reverses = {
+  wont = true,
+  oob = true,
+  frenles = true,
+  timles = true,
+  lit = true,
+  alt = true,
+  past = true,
+  wun = true,
+  an = true,
+  mayb = true,
+  ["wait..."] = true,
+  ["w/fren"] = true,
+  arond = true,
+  sans = true,
+  meow = true,
+}
+
+anti_verb_mirrors = {
+  be = true,
+  got = true,
+  paint = true,
+  rp = true,
+}
 
 --in palettes: (3,4) is main title buttons, (4,4) is level buttons, (5,4) is extras
 menu_palettes = {
@@ -252,7 +339,7 @@ selector_grid_contents = {
     "roc", "txt_roc", "txt_goawaypls", "laav", "txt_laav", "txt_hotte","txt_visitfren", "txt_w/fren", "txt_arond", "txt_frenles", "txt_copkat", "txt_zawarudo", "txt_timles", "txt_behind", "txt_beside", "txt_lookaway", "txt_notranform", "this",
     "wal", "txt_wal", "txt_nogo", "l..uv", "txt_l..uv", "gras", "txt_gras", "txt_creat", "txt_lookat", "txt_spoop", "txt_yeet", "txt_turncornr", "txt_corekt", "txt_goarnd", "txt_mirrarnd", "txt_past", 0, "txt_sing",
     "watr", "txt_watr", "txt_noswim", "meem", "txt_meem", "dayzy", "txt_dayzy", "txt_snacc", "txt_seenby" , "txt_stalk", "txt_moov", "txt_folowal", "txt_rong", "txt_her", "txt_thr", "txt_rithere", "txt_the", 0,
-    "skul", "txt_skul", "txt_:(", "til", "txt_til", "hurcane", "txt_hurcane", "gunne", "txt_gunne", "wog", "txt_wog", "txt_zip", "txt_shy...", "txt_munwalk", "txt_sidestep", "txt_diagstep", "txt_hopovr", "txt_knightstep",
+    "skul", "txt_skul", "txt_:(", "til", "txt_til", "hurcane", "txt_hurcane", "gunne", "txt_gunne", "wog", "txt_wog", 0, "txt_shy...", "txt_munwalk", "txt_sidestep", "txt_diagstep", "txt_hopovr", "txt_knightstep",
     "boux", "txt_boux", "txt_comepls", "os", "txt_os", "bup", "txt_bup", "han", "txt_han", "fenss", "txt_fenss", 0, 0, "hol", "txt_hol", "txt_poortoll", "txt_blacc", "txt_reed",
     "bellt", "txt_bellt", "txt_go", "tre", "txt_tre", "piler", "txt_piler", "hatt", "txt_hatt", "hedg", "txt_hedg", 0, 0, "rif", "txt_rif", "txt_glued", "txt_whit", "txt_orang",
     "boll", "txt_boll", "txt_:o", "frut", "txt_frut", "kirb", "txt_kirb", "katany", "txt_katany", "metl", "txt_metl", 0, 0, 0, 0, "txt_enby", "txt_colrful", "txt_yello",
@@ -282,10 +369,10 @@ selector_grid_contents = {
   },
   -- page 4: characters and special objects
   {
-    "bab","txt_bab","kat","txt_kat","flof","txt_flof","babby","txt_babby","bunmy","txt_bunmy",0,0,0,0,"lila","txt_lila","larry","txt_larry",
+    "bab","txt_bab","kat","txt_kat","flof","txt_flof","babby","txt_babby","bad","txt_bad",0,0,0,0,"lila","txt_lila","larry","txt_larry",
     "keek","txt_keek","creb","txt_creb","shrim","txt_shrim","moo","txt_moo","toby","txt_toby",0,0,0,0,"pata","txt_pata","jill","txt_jill",
     "meem","txt_meem","statoo","txt_statoo","flamgo","txt_flamgo","migri","txt_migri","temmi","txt_temmi",0,0,0,0,"slab","txt_slab","zsoob","txt_zsoob",
-    "skul","txt_skul","beeee","txt_beeee","gul","txt_gul","kva","txt_kva",0,0,0,0,0,0,"notnat","txt_notnat","oat","txt_oat",
+    "skul","txt_skul","beeee","txt_beeee","gul","txt_gul","kva","txt_kva","bunmy","txt_bunmy",0,0,0,0,"notnat","txt_notnat","oat","txt_oat",
     "ghostfren","txt_ghostfren","fishe","txt_fishe","starrfishe","txt_starrfishe","pidgin","txt_pidgin",0,0,0,0,0,0,0,0,"butcher","txt_butcher",
     "robobot","txt_robobot","snek","txt_snek","sneel","txt_sneel","swan","txt_swan",0,0,0,0,0,0,0,0,0,0,
     "wog","txt_wog","bog","txt_bog","enbybog","txt_enbybog","spoder","txt_spoder",0,0,0,0,0,0,0,0,0,0,
@@ -313,12 +400,12 @@ selector_grid_contents = {
     "wuud","txt_wuud","spiky","txt_spiky","parsol","txt_parsol","clok","txt_clok","ufu","txt_ufu","rockit","txt_rockit","swim","txt_swim","yanying","txt_yanying","casete","txt_casete",
     "brik","txt_brik","sparkl","txt_sparkl","sanglas","txt_sanglas","bullb","txt_bullb","son","txt_son","muun","txt_muun","bac","txt_bac","warn","txt_warn","piep","txt_piep",
     "san","txt_san","piler","txt_piler","sancastl","txt_sancastl","shel","txt_shel","starr","txt_starr","cor","txt_cor","byc","txt_byc","gorder","txt_gorder","tuba","txt_tuba",
-    "glas","txt_glas","bom","txt_bom","sine","txt_sine","kar","txt_kar","can","txt_can","ger","txt_ger","sirn","txt_sirn","chain","txt_chain","reflecr","txt_reflecr",
-    "bordr","txt_bordr","wut","txt_wut","wat","txt_wat","splittr","txt_splittr","toggl","txt_toggl","bon","txt_bon","battry","txt_battry","chekr","txt_chekr","sloop","txt_sloop",
+    "glas","txt_glas","bom","txt_bom","sine","txt_sine","kar","txt_kar","can","txt_can","ger","txt_ger","sirn","txt_sirn","chain","txt_chain","sloop","txt_sloop",
+    "bordr","txt_bordr","wut","txt_wut","wat","txt_wat","splittr","txt_splittr","toggl","txt_toggl","bon","txt_bon","battry","txt_battry","chekr","txt_chekr","gato","txt_gato",
   },
   -- page 6: more inanimate objects
   {
-    "gato","txt_gato","fube","txt_fube","tronk","txt_tronk","cart","txt_cart","drop","txt_drop","woosh","txt_woosh",0,0,0,0,0,0,
+    "fube","txt_fube","tronk","txt_tronk","cart","txt_cart","drop","txt_drop","woosh","txt_woosh",0,0,0,0,0,0,0,0,
     "colect","txt_colect","zig","txt_zig","pixl","txt_pixl","prop","txt_prop","qb","txt_qb",0,0,0,0,0,0,0,0,
     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
     "whee","txt_whee","joycon","txt_joycon",0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -342,15 +429,15 @@ selector_grid_contents = {
     "txt_nogo","txt_goawaypls","txt_comepls","txt_sidekik","txt_diagkik","txt_delet","txt_hotte","txt_fridgd","txt_thingify",0,"txt_dragbl","txt_nodrag","txt_alt","txt_clikt","txt_past","txt_wun","txt_an","txt_mayb",
     "txt_visitfren","txt_slep","txt_shy...","txt_behinu","txt_walk","txt_:o","txt_moar","txt_split","txt_txtify",0,"txt_rythm","txt_curse",0,"txt_wait...","txt_samefloat","txt_samepaint","txt_sameface",0,
     "txt_flye","txt_tall","txt_haetskye","txt_haetflor",0,"txt_un:)","txt_gone","txt_nuek","txt_notranform",0,0,0,0,"txt_w/fren","txt_arond","txt_sans","txt_seenby","txt_behind",
-    "txt_diag","txt_ortho","txt_gomyway","txt_zip",0,"txt_b)","txt_cool",0,0,0,0,0,0,"txt_that","txt_thatbe","txt_thatgot","txt_meow","txt_beside",
+    "txt_diag","txt_ortho","txt_gomyway",0,0,0,"txt_cool",0,0,0,0,0,0,"txt_that","txt_thatbe","txt_thatgot","txt_meow","txt_beside",
     "txt_turncornr","txt_folowal","txt_hopovr","txt_reflecc",0,0,0,0,0,0,0,0,0,"txt_reed","txt_orang","txt_yello","txt_grun","txt_cyeann",
     "txt_munwalk","txt_sidestep","txt_diagstep","txt_knightstep",0,"txt_tryagain","txt_noundo","txt_undo","txt_zawarudo","txt_brite","txt_torc","txt_tranparnt",0,"txt_bleu","txt_purp","txt_pinc","txt_whit","txt_graey",
-    "txt_spin","txt_rotatbl","txt_noturn","txt_stukc",0,"txt_poortoll","txt_goarnd","txt_mirrarnd","txt_glued",0,0,0,0,0,0,0,"txt_blacc","txt_brwn",
-    "txt_upleft","txt_up","txt_upright","txt_thicc",0,"txt_her","txt_thr","txt_rithere","txt_the","txt_deez",0,0,0,"txt_gay","txt_tranz","txt_enby","txt_colrful","txt_rave",
-    "txt_left","txt_direction","txt_right",0,0,0,0,0,0,0,0,0,0,0,0,"txt_stelth","txt_qt","txt_thonk",
-    "txt_downleft","txt_down","txt_downright",0,0,"selctr","txt_selctr","txt_frens","txt_groop","txt_gang","txt_themself",0,0,0,0,0,0,0,
-    0,0,0,0,0,"lvl","txt_lvl","txt_txt","txt_no1","txt_every1","txt_every2","this","txt_xplod",0,0,0,0,0,
-    "txt_...","txt_''","txt_nt",0,0,"lin","txt_lin","txt_lethers","txt_numa","txt_toen","txt_yuiy",0,0,0,0,0,0,0,
+    "txt_spin","txt_rotatbl","txt_noturn","txt_stukc",0,"txt_poortoll","txt_goarnd","txt_mirrarnd","txt_glued",0,0,0,0,"txt_stelth","txt_qt","txt_thonk","txt_blacc","txt_brwn",
+    "txt_upleft","txt_up","txt_upright","txt_thicc",0,"txt_her","txt_thr","txt_rithere","txt_the","txt_deez",0,0,0,"txt_gay","txt_lesbab","txt_tranz","txt_colrful","txt_rave",
+    "txt_left","txt_direction","txt_right",0,0,0,0,0,0,0,0,0,0,"txt_pan","txt_bi","txt_enby","txt_ace","txt_aro",
+    "txt_downleft","txt_down","txt_downright",0,0,"selctr","txt_selctr","txt_frens","txt_groop","txt_gang","txt_themself",0,0,0,0,"txt_fluid",0,0,
+    0,0,0,0,0,"lvl","txt_lvl","txt_txt","txt_no1","txt_every1","txt_every2","this","txt_mous",0,0,0,0,0,
+    "txt_...","txt_''","txt_nt","txt_anti",0,"lin","txt_lin","txt_lethers","txt_numa","txt_toen","txt_yuiy",0,0,0,0,0,0,0,
   },
 }
 tile_grid_width = 18

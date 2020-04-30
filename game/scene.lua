@@ -351,8 +351,8 @@ function scene.resetStuff(forTime)
     love.mouse.setCursor(empty_cursor)
   end
   --love.mouse.setGrabbed(true)
-  --resetMusic("bab be u them", 0.5)
   resetMusic(map_music, 0.9)
+  print(map_music)
   loadMap()
   clearRules()
   parseRules()
@@ -480,11 +480,11 @@ function scene.keyPressed(key, isrepeat)
     end
     
    if rules_with and rules_with["rythm"] then
-        if key == "+" or key == "=" then
-            rhythm_interval = rhythm_interval * 0.8
-        elseif key == "-" or key == "_" then
-            rhythm_interval = rhythm_interval / 0.8
-        end
+      if key == "+" or key == "=" then
+        rhythm_interval = rhythm_interval * 0.8
+      elseif key == "-" or key == "_" then
+        rhythm_interval = rhythm_interval / 0.8
+      end
     end
     
     --print(rhythm_interval)
@@ -508,35 +508,35 @@ function scene.keyPressed(key, isrepeat)
     
     -- Replay keys
       if key == "f12" then
-          if not replay_playback then
-              tryStartReplay()
-          else
-              replay_playback = false
-          end
+        if not replay_playback then
+          tryStartReplay()
+        else
+          replay_playback = false
+        end
       end
       
       if replay_playback and not pause then
-          if key == "+" or key == "=" or key == "w" or key == "up" then
-              replay_playback_interval = replay_playback_interval * 0.8
-          elseif key == "-" or key == "_" or key == "s" or key == "down" then
-              replay_playback_interval = replay_playback_interval / 0.8
-          elseif key == "0" or key == ")" then
-              replay_playback_interval = 0.3
-          elseif key == "space" then
-              replay_pause = not replay_pause
-          elseif key == "z" or key == "q" or key == "backspace" or key == "kp0" or key == "o" or key == "a" or key == "left" then
-              replay_pause = true
-              if replay_playback_turn > 1 then
-                  replay_playback_turn = replay_playback_turn - 1
-                  doOneMove(0,0,"undo")
-              end
-              print(replay_playback_turn)
-          elseif key == "d" or key == "right" then
-              doReplayTurn(replay_playback_turn)
-              replay_playback_turn = replay_playback_turn + 1
-          elseif key == "e" then
-              replay_playback_interval = 0
+        if key == "+" or key == "=" or key == "w" or key == "up" then
+          replay_playback_interval = replay_playback_interval * 0.8
+        elseif key == "-" or key == "_" or key == "s" or key == "down" then
+          replay_playback_interval = replay_playback_interval / 0.8
+        elseif key == "0" or key == ")" then
+          replay_playback_interval = 0.3
+        elseif key == "space" then
+          replay_pause = not replay_pause
+        elseif key == "z" or key == "q" or key == "backspace" or key == "kp0" or key == "o" or key == "a" or key == "left" then
+          replay_pause = true
+          if replay_playback_turn > 1 then
+            replay_playback_turn = replay_playback_turn - 1
+            doOneMove(0,0,"undo")
           end
+          print(replay_playback_turn)
+        elseif key == "d" or key == "right" then
+          doReplayTurn(replay_playback_turn)
+          replay_playback_turn = replay_playback_turn + 1
+        elseif key == "e" then
+          replay_playback_interval = 0
+        end
       end
       
     if key == "e" and not currently_winning and not replay_playback then
@@ -564,7 +564,7 @@ function scene.keyPressed(key, isrepeat)
   end
 end
 
-function tryStartReplay()
+function tryStartReplay(instant)
   scene.resetStuff()
   local dir = getWorldDir() .. "/"
   local full_dir = getWorldDir(true) .. "/"
@@ -586,6 +586,14 @@ function tryStartReplay()
     print("Started replay from: ".."levels/" .. level_name .. ".replay")
   else
     print("Failed to find replay: ".. dir .. level_filename .. ".replay")
+  end
+
+  if instant then
+    local turn = 1
+    while replay_playback do
+      doReplayTurn(turn)
+      turn = turn + 1
+    end
   end
 end
 
@@ -649,16 +657,25 @@ function scene.getTransform()
   local screenwidth = love.graphics.getWidth() * (is_mobile and 0.75 or 1)
   local screenheight = love.graphics.getHeight()
 
-  local scales = {0.25, 0.375, 0.5, 0.75, 1, 2, 3, 4}
+  local targetwidth = (mapwidth + 4) * TILE_SIZE
+  local targetheight = (mapheight + 4) * TILE_SIZE
 
-  local scale = scales[1]
-  for _,s in ipairs(scales) do
-    if screenwidth >= roomwidth * s and screenheight >= roomheight * s then
-      scale = s
-    else break end
+  if settings["int_scaling"] then
+    targetwidth = roomwidth
+    targetheight = roomheight
   end
-  if settings["game_scale"] ~= "auto" and settings["game_scale"] < scale then
-    scale = settings["game_scale"]
+
+  local scale = 1
+  if settings["int_scaling"] then
+    local scales = {0.25, 0.375, 0.5, 0.75, 1, 2, 3, 4}
+    scale = scales[1]
+    for _,s in ipairs(scales) do
+      if screenwidth >= roomwidth * s and screenheight >= roomheight * s then
+        scale = s
+      else break end
+    end
+  else
+    scale = math.min(screenwidth / targetwidth, screenheight / targetheight)
   end
 
   local scaledwidth = screenwidth * (1/scale)
@@ -781,7 +798,7 @@ function scene.draw(dt)
     if unit.name == "no1" and not (draw_empty and validEmpty(unit)) then return end
     
     local brightness = 1
-    if ((unit.type == "txt" and not hasRule(unit,"ben't","wurd")) or hasRule(unit,"be","wurd")) and not unit.active and not level_destroyed and not (unit.fullname == "prop") then
+    if (hasRule(unit,"be","wurd") or hasRule(unit,"be","anti wurd")) and not unit.active and not level_destroyed and not (unit.fullname == "prop") then
       brightness = 0.33
     end
 
@@ -906,7 +923,7 @@ function scene.draw(dt)
 
     local function getOffset()
       if unit.cool or not settings["shake_on"] then return 0,0 end
-      if rules_with["temmi"] then
+      if rules_with["temmi"] or rules_with["anti slep"] then
         local do_vibrate = false
         if unit.fullname == "temmi" then
           do_vibrate = true
@@ -923,16 +940,22 @@ function scene.draw(dt)
               if do_vibrate then break end
             end
           end
+        elseif hasProperty(unit,"anti slep") then
+          do_vibrate = true
         end
         if do_vibrate then
           if unit.fullname == "temmi" then
             local props = countProperty(unit,"?")
+            props = props + (countProperty(unit,"anti slep") * 9)
             if math.random() > 1/(props+1) then
               return math.random(-props, props), math.random(-props, props)
             end
           else
-            if math.random() > 0.5 then
-              return math.random(-1, 1), math.random(-1, 1)
+            local props = countProperty(unit,"anti slep")
+            if math.random() > 1/(props+1) then
+              return math.random(-props, props), math.random(-props, props)
+            elseif props == 0 and math.random() > 0.5 then
+              return math.random(-1,1), math.random(-1,1)
             end
           end
         end
@@ -1615,7 +1638,7 @@ function scene.draw(dt)
 
   if not pause then gooi.draw() end
   if is_mobile then
-    if rules_with["zawarudo"] then
+    if rules_with["zawarudo"] or rules_with["anti zawarudo"] then
       mobile_controls_timeless:setVisible(true)
       mobile_controls_timeless:setBGImage(sprites[timeless and "ui/time resume" or "ui/timestop"])
     else
@@ -1716,8 +1739,9 @@ function scene.draw(dt)
 
       if rainbowmode then love.graphics.setColor(hslToRgb((love.timer.getTime()/6+i*10)%1, .5, .5, .9)) end
       
+      local cursorrot = ((cursor.dir + 1) % 8) * 45
       if not hasProperty(cursor,"stelth") then
-        love.graphics.draw(system_cursor, cursor.screenx, cursor.screeny)
+        love.graphics.draw(system_cursor, cursor.screenx, cursor.screeny, math.rad(cursorrot))
       end
 
       love.graphics.setColor(1,1,1)
@@ -1726,7 +1750,7 @@ function scene.draw(dt)
       if #cursor.overlay > 0 then
         local function overlayStencil()
           pcallSetShader(mask_shader)
-          love.graphics.draw(system_cursor, cursor.screenx, cursor.screeny)
+          love.graphics.draw(system_cursor, cursor.screenx, cursor.screeny, math.rad(cursorrot))
           love.graphics.setShader()
         end
         for _,overlay in ipairs(cursor.overlay) do
@@ -2109,6 +2133,12 @@ function escResult(do_actual, xwx)
       load_mode = "play"
       new_scene = loadscene
       if (love.filesystem.getInfo(getWorldDir(true) .. "/" .. "overworld.txt")) then
+        if loaded_custom_assets then
+          unloadMod()
+          assets.clear()
+          assets.load("assets")
+          loaded_custom_assets = false
+        end
         world = ""
       end
     else
@@ -2139,7 +2169,7 @@ function doOneMove(x, y, key, past)
   end
   
   if (key == "e") then
-		if hasProperty(nil,"zawarudo") then
+		if hasProperty(nil,"zawarudo") or hasProperty(nil,"anti zawarudo") then
       --[[
       level_shader = shader_zawarudo
       shader_time = 0
@@ -2444,6 +2474,8 @@ function particlesRngCheck()
   return math.random() < math.pow(0.5, (#particles-50)/50)
 end
 
+last_click_button = 1;
+
 function scene.mouseReleased(x, y, button)
   local height, width = love.graphics.getHeight(), love.graphics.getWidth()
   local box = sprites["ui/32x32"]:getWidth()
@@ -2481,6 +2513,7 @@ function scene.mouseReleased(x, y, button)
     -- CLIKT prefix
     if units_by_name["txt_clikt"] then
       last_click_x, last_click_y = screenToGameTile(love.mouse.getX(), love.mouse.getY())
+      last_click_button = 1
       doOneMove(last_click_x,last_click_y,"clikt")
       last_click_x, last_click_y = nil, nil
       playSound("clicc")
@@ -2512,6 +2545,14 @@ function scene.mouseReleased(x, y, button)
       end
     end
   elseif button == 2 then
+    -- CLIKT prefix
+    if units_by_name["txt_clikt"] then
+      last_click_x, last_click_y = screenToGameTile(love.mouse.getX(), love.mouse.getY())
+      last_click_button = 2
+      doOneMove(last_click_x,last_click_y,"anti clikt")
+      last_click_x, last_click_y = nil, nil
+      playSound("clicc")
+    end
     -- Stacks preview
     scene.setStackBox(screenToGameTile(x, y))
   end
@@ -2553,14 +2594,17 @@ function scene.resize(w, h)
   scene.buildUI()
 end
 
+mouse_grabbedX, mouse_grabbedY = nil,nil
+
 function scene.mousePressed(x, y, button)
-  if not rules_with["dragbl"] then return end
+  if not (rules_with["dragbl"] or rules_with["anti dragbl"]) then return end
   
   if button == 1 then
     local tx,ty = screenToGameTile(x,y)
     local stuff = getUnitsOnTile(tx,ty)
     for _,unit in ipairs(stuff) do
-      if hasProperty(unit,"dragbl") then
+      if hasProperty(unit,"dragbl") or hasProperty(unit,"anti dragbl") then
+        mouse_grabbedX, mouse_grabbedY = tx,ty
         table.insert(drag_units, unit)
       end
     end
@@ -2621,14 +2665,27 @@ end
 
 function doDragbl()
   if drag_units and #drag_units > 0 then
-    local mx, my = screenToGameTile(mouse_X, mouse_Y, true)
+    local tx, ty = screenToGameTile(mouse_X, mouse_Y, true)
+    tx,ty = tx - 0.5, ty - 0.5
+    --[[local mx, my = mouse_grabbedX*2-mx, mouse_grabbedY*2-my
     mx, my = mx - 0.5, my - 0.5
-    local tx, ty = screenToGameTile(mouse_X, mouse_Y, false)
+    --local tx, ty = screenToGameTile(mouse_X, mouse_Y, false)]]
     local nodrags = getUnitsWithEffect("nodrag")
 
     for _,unit in ipairs(drag_units) do
+      --local anti = hasProperty(unit,"anti dragbl")
+      local mx, my
+      if hasProperty(unit,"anti dragbl") then
+        mx,my = mouse_grabbedX*2-tx, mouse_grabbedY*2-ty
+      else
+        mx,my = tx,ty
+      end
+      --mx, my = mx - 0.5, my - 0.5
       local oldx, oldy = math.floor(unit.draw.x), math.floor(unit.draw.y)
       local dx, dy = sign(mx - unit.draw.x), sign(my - unit.draw.y)
+      if anti then
+        dx, dy = sign(mx - unit.draw.x), sign(my - unit.draw.y)
+      end
       local gox, goy = true, true
 
       for __,other in ipairs(nodrags) do

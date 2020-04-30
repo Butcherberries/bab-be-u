@@ -5,14 +5,14 @@ sfx_volume = 1
 
 current_music = ""
 music_fading = false
+sounds = {}
 local current_volume = 1
 local old_volume = 1
-local sounds = {}
 local sound_instances = {}
 
 function registerSound(sound, volume)
   sounds[sound] = {
-    data = love.sound.newSoundData("assets/audio/sfx/" .. sound .. ".wav"),
+    data = love.sound.newSoundData(sound_path[sound]),
     volume = volume or 1
   }
   --[[if not (sounds[sound].data) then
@@ -58,18 +58,16 @@ function playMusic(music, volume)
   current_volume = volume or 1
   old_volume = volume or 1
   
-  if love.filesystem.getInfo("assets/audio/bgm/" .. music .. ".wav") ~= nil then
-    music_source = love.audio.newSource("assets/audio/bgm/" .. music .. ".wav", "static")
-  elseif love.filesystem.getInfo("assets/audio/bgm/" .. music .. ".ogg") ~= nil then
-    music_source = love.audio.newSource("assets/audio/bgm/" .. music .. ".ogg", "static")
-  elseif love.filesystem.getInfo("assets/audio/bgm/" .. music .. ".xm") ~= nil then
-    music_source = love.audio.newSource("assets/audio/bgm/" .. music .. ".xm", "static")
+  if music_path[music] then
+    music_source = love.audio.newSource(music_path[music], "static")
   else
-    music_source = love.audio.newSource("assets/audio/bgm/" .. music .. ".mp3", "static")
+    music_source = nil
   end
-  music_source:setLooping(true)
-  music_source:setVolume(current_volume * music_volume)
-  music_source:play()
+  if music_source ~= nil then
+    music_source:setLooping(true)
+    music_source:setVolume(current_volume * music_volume)
+    music_source:play()
+  end
 
   current_music = music
 end
@@ -86,14 +84,12 @@ function resetMusic(name,volume)
     volume = 0.01
   end
   
-  if name ~= "" then
-    music_fading = false
-    if current_volume == 0 or not hasMusic() or current_music ~= name then
-      playMusic(name,volume)
-    else
-      current_volume = volume
-      old_volume = volume
-    end
+  music_fading = false
+  if current_volume == 0 or not hasMusic() or current_music ~= name then
+    playMusic(name,volume)
+  else
+    current_volume = volume
+    old_volume = volume
   end
 end
 

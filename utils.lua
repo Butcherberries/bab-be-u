@@ -81,6 +81,7 @@ function clear()
   timeless_win = {}
   timeless_unwin = {}
   timeless_reset = false
+  timeless_replay = false
   timeless_crash = false
   timeless_yote = {}
   firsttimestop = true
@@ -148,7 +149,7 @@ end
 function initializeGraphicalPropertyCache()
   local properties_to_init = -- list of properties that require the graphical cache
   {
-    "flye", "slep", "tranz", "gay", "stelth", "colrful", "delet", "rave", "enby" -- miscelleaneous graphical effects
+    "flye", "slep", "stelth", "colrful", "delet", "rave", "tranz", "gay", "enby", "ace", "pan", "bi", "lesbab", "aro", "fluid" -- miscelleaneous graphical effects
   }
   for i = 1, #properties_to_init do
     local prop = properties_to_init[i]
@@ -202,20 +203,16 @@ function loadMap()
         if version == 1 then
           local tile, x, y, dir
           tile, x, y, dir, pos = love.data.unpack(PACK_UNIT_V1, map, pos)
-          if inBounds(x, y) then
-            createUnit(tile, x + offset.x, y + offset.y, dir)
-          end
+          createUnit(tile, x + offset.x, y + offset.y, dir)
         elseif version == 2 or version == 3 then
           local id, tile, x, y, dir, specials
           id, tile, x, y, dir, specials, pos = love.data.unpack(version == 2 and PACK_UNIT_V2 or PACK_UNIT_V3, map, pos)
-          if inBounds(x + offset.y, y + offset.y) then
-            local unit = createUnit(tile, x + offset.x, y + offset.y, dir, false, id)
-            local spos = 1
-            while spos <= #specials do
-              local k, v
-              k, v, spos = love.data.unpack(PACK_SPECIAL_V2, specials, spos)
-              unit.special[k] = v
-            end
+          local unit = createUnit(tile, x + offset.x, y + offset.y, dir, false, id)
+          local spos = 1
+          while spos <= #specials do
+            local k, v
+            k, v, spos = love.data.unpack(PACK_SPECIAL_V2, specials, spos)
+            unit.special[k] = v
           end
         end
       end
@@ -230,6 +227,7 @@ function loadMap()
       local lvls = {}
       local locked_lvls = {}
       local created = {}
+      local pre_created = {}
       local dofloodfill = scene ~= editor
       for _,unit in ipairs(map) do
         id, tile, x, y, dir, specials, color = unit.id, unit.tile, unit.x, unit.y, unit.dir, unit.special, unit.color
@@ -280,7 +278,11 @@ function loadMap()
           elseif specials.visibility == "open" or specials.visibility == "locked" or specials.visibility == nil then
             local unit = createUnit(tile, x, y, dir, false, id, nil, color)
             unit.special = specials
-            created[id] = true
+            if specials.visibility == "open" then
+              created[id] = true
+            else
+              pre_created[id] = unit
+            end
           end
           table.insert(objects, {id, tile, x, y, dir, specials, color})
         elseif tile == "lin" then
@@ -334,7 +336,7 @@ function loadMap()
                 if not created[v[1]] then
                   if v[2] == "lvl" then
                     if ptype ~= 2 then
-                      local unit = createUnit(v[2], v[3], v[4], v[5], false, v[1], nil, v[7])
+                      local unit = pre_created[v[1]] or createUnit(v[2], v[3], v[4], v[5], false, v[1], nil, v[7])
                       created[v[1]] = true
                       unit.special = v[6]
                       if ptype == 1 then
@@ -348,7 +350,7 @@ function loadMap()
                       table.insert(floodfill, {{x = v[3], y = v[4]}, 2})
                     end
                   elseif (ptype == 1 or ptype == 3) and v[2] == "lin" and (not v[6].pathlock or v[6].pathlock == "none") then
-                    local unit = createUnit(v[2], v[3], v[4], v[5], false, v[1], nil, v[7])
+                    local unit = pre_created[v[1]] or createUnit(v[2], v[3], v[4], v[5], false, v[1], nil, v[7])
                     created[v[1]] = true
                     unit.special = v[6]
                     table.insert(floodfill, {unit, 3})
@@ -360,7 +362,7 @@ function loadMap()
         end
         for _,v in ipairs(locked_lvls) do
           if not created[v[1]] then
-            local unit = createUnit(v[2], v[3], v[4], v[5], false, v[1], nil, v[7])
+            local unit = pre_created[v[1]] or createUnit(v[2], v[3], v[4], v[5], false, v[1], nil, v[7])
             created[v[1]] = true
             unit.special = v[6]
           end
@@ -541,9 +543,6 @@ function matchesRule(rule1,rule2,rule3,stopafterone,debugging)
 
   --there are more properties than there are nouns, so we're more likely to miss based on a property not existing than based on a noun not existing
   rules_list = rules_with[(nrules[2] ~= "be" and nrules[2]) or nrules[3] or nrules[1] or nrules[2]] or {}
-  if #rules_list == 0 and rules_with[2] == "be" then
-    rules_list = rules_with["is"]
-  end
   mergeTable(rules_list, rules_with[fnrules[3] or fnrules[1]] or {})
 
   if (debugging) then
@@ -563,20 +562,24 @@ function matchesRule(rule1,rule2,rule3,stopafterone,debugging)
         --special case for stuff like 'group be x' - if we are in that group, we do match that rule
         --we also need to handle groupn't
         --seems to not impact performance much?
-        local group_match = false
+        local pre_match = false
         if rule_units[i] ~= nil then
-          if group_sets[name] and group_sets[name][rule_units[i] ] then
-            group_match = true
+          if name == "themself" and i == 3 and rule_units[1] then
+            pre_match = rule_units[1] == rule_units[i]
+          elseif name == "themselfn't" and i == 3 and rule_units[1] then
+            pre_match = rule_units[1] ~= rule_units[i]
+          elseif group_sets[name] and group_sets[name][rule_units[i] ] then
+            pre_match = true
           else
             if rule_units[i].type == "object" and group_names_set_nt[name] then
               local nament = name:sub(1, -4)
               if not group_sets[nament][rule_units[i] ] then
-                group_match = true
+                pre_match = true
               end
             end
           end
         end
-        if not (group_match) then
+        if not (pre_match) then
           if nrules[i] ~= nil and nrules[i] ~= name and (fnrules[i] == nil or (fnrules[i] ~= nil and fnrules[i] ~= name)) then
             if (debugging) then
               print("false due to nrules/fnrules mismatch")
@@ -611,9 +614,21 @@ function matchesRule(rule1,rule2,rule3,stopafterone,debugging)
           table.insert(ret, rules)
           if stopafterone then return ret end
         elseif find == 1 then
-          for _,unit in ipairs(findUnitsByName(rule[ruleparts[find_arg]].name)) do
+          local object_units = {}
+          if find_arg == 3 and rule_units[1] and rule[ruleparts[find_arg]].name == "themself" then
+            object_units = {rule_units[1]}
+          elseif find_arg == 3 and rule_units[1] and rule[ruleparts[find_arg]].name == "themselfn't" then
+            for _,unit in ipairs(units) do
+              if unit ~= rule_units[1] and unit ~= outerlvl and unit.fullname ~= "no1" and unit.fullname ~= "bordr" then
+                table.insert(object_units, unit)
+              end
+            end
+          else
+            object_units = findUnitsByName(rule[ruleparts[find_arg]].name)
+          end
+          for _,unit in ipairs(object_units) do
             local cond
-            if testConds(unit, rule[ruleparts[find_arg]].conds) then
+            if testConds(unit, rule[ruleparts[find_arg]].conds, rule_units[1]) then
               --check that there isn't a verbn't rule - edge cases where this might happen: text vs specific text, group vs unit. This is slow (15% longer unit tests, 0.1 second per unit test) but it fixes old and new bugs so I think we just have to suck it up.
               if rules_with[rule.verb.name.."n't"] ~= nil and #matchesRule(unit, rule.verb.name.."n't", rule.object.name, true) > 0 then
               else
@@ -625,8 +640,20 @@ function matchesRule(rule1,rule2,rule3,stopafterone,debugging)
         elseif find == 2 then
           local found1, found2
           for _,unit1 in ipairs(findUnitsByName(rule.subject)) do
-            for _,unit2 in ipairs(findUnitsByName(rule.object)) do
-              if testConds(unit1, rule.subject.conds) and testConds(unit2, rule.object.conds, unit1) then
+            local object_units = {}
+            if rule.object.name == "themself" then
+              object_units = {unit1}
+            elseif rule.object.name == "themselfn't" then
+              for _,unit in ipairs(units) do
+                if unit ~= unit1 and unit ~= outerlvl and unit.fullname ~= "no1" and unit.fullname ~= "bordr" then
+                  table.insert(object_units, unit)
+                end
+              end
+            else
+              object_units = findUnitsByName(rule.object)
+            end
+            for _,unit2 in ipairs(object_units) do
+              if testConds(unit1, rule.subject.conds, unit1) and testConds(unit2, rule.object.conds, unit1) then
                 table.insert(ret, {rules, unit1, unit2})
                 if stopafterone then return ret end
               end
@@ -659,7 +686,7 @@ function getUnitsWithEffect(effect, return_rule)
   for _,rule in ipairs(rules) do
     local unit = rule[2]
     if not unit.removed then
-      for _,other in ipairs(getUnitsOnTile(unit.x, unit.y, nil, false, unit, nil, hasProperty(unit,"thicc"))) do
+      for _,other in ipairs(getUnitsOnTile(unit.x, unit.y, {exclude = unit, thicc = hasProperty(unit,"thicc")})) do
         if not gotten[other] and sameFloat(unit, other) and not hasRule(other, "ben't", effect) and ignoreCheck(other, unit) then
           table.insert(result, other)
           table.insert(result_rules, rule[1])
@@ -730,7 +757,7 @@ function getUnitsWithEffectAndCount(effect)
   for _,rule in ipairs(rules) do
     local unit = rule[2]
     if not unit.removed then
-      for _,other in ipairs(getUnitsOnTile(unit.x, unit.y, nil, false, unit, nil, hasProperty(unit,"thicc"))) do
+      for _,other in ipairs(getUnitsOnTile(unit.x, unit.y, {exclude = unit, thicc = hasProperty(unit,"thicc")})) do
         if sameFloat(unit, other) and not hasRule(other, "ben't", effect) and ignoreCheck(other, unit) then
           if result[other] == nil then
             result[other] = 0
@@ -775,6 +802,15 @@ function getUnitsWithEffectAndCount(effect)
         end
       end
     end
+  end
+  return result
+end
+function getUnitsWithEffectAndCountAndAnti(effect)
+  local result = getUnitsWithEffectAndCount(effect)
+  local anti = getUnitsWithEffectAndCount("anti "..effect)
+
+  for unit,amt in pairs(anti) do
+    result[unit] = (result[unit] or 0) - amt
   end
   return result
 end
@@ -882,7 +918,7 @@ function hasProperty(unit,prop,return_rule)
   if unit then
     local has_lvl_giv, lvl_giv_rule = hasRule(outerlvl, "giv", prop)
     if has_lvl_giv then return true, lvl_giv_rule end
-    for _,other in ipairs(getUnitsOnTile(unit.x, unit.y, nil, false, unit, true, hasRule(unit,"be","thicc"))) do
+    for _,other in ipairs(getUnitsOnTile(unit.x, unit.y, {exclude = unit, thicc = hasProperty(unit,"thicc")})) do
       local givs = matchesRule(other, "giv", prop)
       if #givs > 0 and sameFloat(unit, other) and ignoreCheck(unit, other) then
         return true, (return_rule and givs[1] or nil)
@@ -893,7 +929,7 @@ function hasProperty(unit,prop,return_rule)
     if has_lvl_giv then return true, lvl_giv_rule end
     for _,ruleparent in ipairs(matchesRule(nil, "giv", prop)) do
       for _,other in ipairs(ruleparent.units) do
-        if #getUnitsOnTile(other.x, other.y, nil, false, other, true, hasRule(unit,"be","thicc")) > 0 and sameFloat(unit, other) then
+        if #getUnitsOnTile(other.x, other.y, {exclude = unit, checkmous = true, thicc = hasProperty(unit,"thicc")}) > 0 and sameFloat(unit, other) then
           return true, (return_rule and ruleparent or nil)
         end
       end
@@ -911,7 +947,7 @@ function countProperty(unit, prop, ignore_flye)
   if unit and unit.class == "mous" then return result end
   result = result + #matchesRule(outerlvl, "giv", prop)
   if unit then
-    for _,other in ipairs(getUnitsOnTile(unit.x, unit.y, nil, false, unit, true, hasProperty(unit,"thicc"))) do
+    for _,other in ipairs(getUnitsOnTile(unit.x, unit.y, {exclude = unit, checkmous = true, thicc = hasProperty(unit,"thicc")})) do
       if ignoreCheck(unit, other) and (ignore_flye or sameFloat(unit, other)) then
         result = result + #matchesRule(other, "giv", prop)
       end
@@ -920,7 +956,7 @@ function countProperty(unit, prop, ignore_flye)
     for _,ruleparent in ipairs(matchesRule(nil, "giv", prop)) do
       for _,other in ipairs(ruleparent.units) do
         if ignoreCheck(unit, other) and (ignore_flye or sameFloat(unit, other)) then
-          result = result + #getUnitsOnTile(other.x, other.y, nil, false, other, true, hasProperty(other,"thicc"))
+          result = result + #getUnitsOnTile(other.x, other.y, {exclude = other, checkmous = true, thicc = hasProperty(other,"thicc")})
         end
       end
     end
@@ -929,16 +965,20 @@ function countProperty(unit, prop, ignore_flye)
 end
 
 function hasU(unit)
-  return hasProperty(unit,"u") or hasProperty(unit,"utoo") or hasProperty(unit,"utres") or hasProperty(unit,"you") or hasProperty(unit,"y'all")
+  for _,prop in ipairs{"u","utoo","utres","y'all","w","you"} do
+    if hasProperty(unit,prop) or hasProperty(unit,"anti "..prop) then
+      return true
+    end
+  end
+  return false
 end
 
 function getUs()
-  local yous = getUnitsWithEffect("u")
-  mergeTable(yous,getUnitsWithEffect("utoo"))
-  mergeTable(yous,getUnitsWithEffect("utres"))
-  mergeTable(yous,getUnitsWithEffect("you"))
-  mergeTable(yous,getUnitsWithEffect("y'all"))
-  mergeTable(yous,getUnitsWithEffect("w"))
+  local yous = {}
+  for _,prop in ipairs{"u","utoo","utres","y'all","w","you"} do
+    mergeTable(yous,getUnitsWithEffect(prop))
+    mergeTable(yous,getUnitsWithEffect("anti "..prop))
+  end
   return yous
 end
 
@@ -950,6 +990,11 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
   local endresult = true
   for _,cond in ipairs(conds or {}) do
     local condtype = cond.name
+    
+    if condtype:starts("anti ") and anti_word_replacements[condtype:sub(6,-1)] then
+      condtype = anti_word_replacements[condtype:sub(6,-1)]
+    end
+    
     local lists = {} -- for iterating
     local sets = {} -- for checking
 
@@ -1011,12 +1056,17 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
       end
     end
     
-
     local result = true
     local cond_not = false
+    
+    if condtype:starts("anti ") and anti_word_reverses[condtype:sub(6,-1)] then
+      condtype = condtype:sub(6,-1)
+      cond_not = not cond_not
+    end
+    
     if condtype:ends("n't") then
       condtype = condtype:sub(1, -4)
-      cond_not = true
+      cond_not = not cond_not
     end
 
     local x, y = unit.x, unit.y
@@ -1096,7 +1146,7 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
           end
         end
       else
-        local frens = getUnitsOnTile(x, y, nil, false, unit, true, hasProperty(unit,"thicc"))
+        local frens = getUnitsOnTile(x, y, {exclude = unit, checkmous = true, thicc = hasProperty(unit,"thicc")})
         for _,other in ipairs(sets) do
           if other[outerlvl] then
             if not inBounds(unit.x,unit.y) or count > 1 then
@@ -1139,7 +1189,7 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
           end
         else
           local dx, dy, dir, px, py = getNextTile(unit, nx, ny, ndir)
-          others[nx][ny] = getUnitsOnTile(px, py, nil, false, nil, true, hasProperty(unit,"thicc"))
+          others[nx][ny] = getUnitsOnTile(px, py, {checkmous = true, thicc = hasProperty(unit,"thicc")})
         end
       end
       local found_set = {}
@@ -1194,7 +1244,8 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
             local units = getUnitsOnTile(tx,ty)
             for _,unitd in ipairs(units) do
               if hasProperty(unitd,"tranparnt") or unitd.name == bordr then
-                goto continue end --tranparen't stops it, and it's false for the tile with the tranparn't
+                goto continue
+              end --tranparen't stops it, and it's false for the tile with the tranparn't
             end
             for _,set in ipairs(sets) do
               if not found_set[set] then
@@ -1231,7 +1282,7 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
           end
         else
           local dx, dy, dir, px, py = getNextTile(unit, nx, ny, ndir)
-          mergeTable(others, getUnitsOnTile(px, py, nil, false, nil, true, hasProperty(unit,"thicc")))
+          mergeTable(others, getUnitsOnTile(px, py, {checkmous = true, thicc = hasProperty(unit,"thicc")}))
         end
       end
       if unit == outerlvl then --basically turns into sans n't BUT the unit has to be looking inbounds as well!
@@ -1284,7 +1335,7 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
       --TODO: look at dir, ortho, diag, surrounds
       if unit ~= outerlvl then
         local dx, dy, dir, px, py = getNextTile(unit, dirs8[unit.dir][1], dirs8[unit.dir][2], unit.dir)
-        local frens = getUnitsOnTile(px, py, param, false, nil, nil, hasProperty(unit,"thicc"))
+        local frens = getUnitsOnTile(px, py, {name = param, checkmous = true, thicc = hasProperty(unit,"thicc")})
         for i,other in ipairs(sets) do
           local isdir = false
           if cond.others[i].name == "ortho" then
@@ -1344,14 +1395,14 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
       --TODO: look at dir, ortho, diag, surrounds
       if unit ~= outerlvl then
         local dx, dy, dir, px, py = getNextTile(unit, -dirs8[unit.dir][1], -dirs8[unit.dir][2], unit.dir)
-        local frens = getUnitsOnTile(px, py, param, false, nil, nil, hasProperty(unit,"thicc"))
+        local frens = getUnitsOnTile(px, py, {name = param, checkmous = true, thicc = hasProperty(unit,"thicc")})
         for _,other in ipairs(sets) do
           if other[outerlvl] then
-              local dx, dy, dir, px, py = getNextTile(unit, dirs8[unit.dir][1], dirs8[unit.dir][2], unit.dir)
-              if inBounds(px,py) then
-                result = false
-                break
-              end
+            local dx, dy, dir, px, py = getNextTile(unit, dirs8[unit.dir][1], dirs8[unit.dir][2], unit.dir)
+            if inBounds(px,py) then
+              result = false
+              break
+            end
           else
             local found = 0
             for _,fren in ipairs(frens) do
@@ -1370,7 +1421,8 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
         result = false
       end
     elseif condtype == "behind" then
-      local others = {}
+      if result then result = sideCond(unit,sets,params,count,{{-1,-1}}) end
+      --[[local others = {}
       for ndir=1,8 do
         local nx, ny = dirs8[ndir][1], dirs8[ndir][2]
         if unit == outerlvl and surrounds ~= nil and surrounds_name == level_name then
@@ -1382,7 +1434,7 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
           end
         else
           local dx, dy, dir, px, py = getNextTile(unit, nx, ny, ndir)
-          mergeTable(others, getUnitsOnTile(px, py, nil, false, nil, true, hasProperty(unit,"thicc")))
+          mergeTable(others, getUnitsOnTile(px, py, {checkmous = true, thicc = hasProperty(unit,"thicc")}))
         end
       end
       if unit == outerlvl then --basically turns into sans n't BUT the unit's rear has to be looking inbounds as well!
@@ -1433,8 +1485,9 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
             break
           end
         end
-      end
+      end]]
     elseif condtype == "beside" then
+      --if result then result = sideCond(unit,sets,params,count,{{-1,1},{1,-1}}) end
       local others = {}
       for ndir=1,8 do
         local nx, ny = dirs8[ndir][1], dirs8[ndir][2]
@@ -1447,7 +1500,7 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
           end
         else
           local dx, dy, dir, px, py = getNextTile(unit, nx, ny, ndir)
-          mergeTable(others, getUnitsOnTile(px, py, nil, false, nil, true, hasProperty(unit,"thicc")))
+          mergeTable(others, getUnitsOnTile(px, py, {checkmous = true, thicc = hasProperty(unit,"thicc")}))
         end
       end
       if unit == outerlvl then --basically turns into sans n't BUT the unit's side has to be looking inbounds as well!
@@ -1496,7 +1549,7 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
             break
           end
         end
-      end
+      end--]]
     elseif condtype == "sans" then
       for _,other in ipairs(lists) do
         if #other > count or #other == count and other[1] ~= unit then
@@ -1515,7 +1568,7 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
         end
         if found then result = false end
       else
-        local others = getUnitsOnTile(unit.x, unit.y, nil, false, unit, nil, hasProperty(unit,"thicc"))
+        local others = getUnitsOnTile(unit.x, unit.y, {exclude = unit, thicc = hasProperty(unit,"thicc")})
         if #others > 0 then
           result = false
         end
@@ -1593,7 +1646,7 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
     elseif condtype == "timles" then
       result = timeless
     elseif condtype == "clikt" then
-      if unit.x == last_click_x and unit.y == last_click_y then
+      if unit.x == last_click_x and unit.y == last_click_y and last_click_button == 1 then
         result = true
       else
         result = false
@@ -1601,31 +1654,45 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
       --print(result)
       --print(x, y)
       --print(last_click_x, last_click_y)
+    elseif condtype == "anti clikt" then
+      if unit.x == last_click_x and unit.y == last_click_y and last_click_button == 2 then
+        result = true
+      else
+        result = false
+      end
     elseif main_palette_for_colour[condtype] then
       if unit.fullname == "no1" then
         result = false
       elseif unit.rave or unit.colrful then
         result = true
-      elseif unit.gay then
-        if condtype == "blacc" or condtype == "whit" or condtype == "graey" or condtype == "brwn" then
-          result = false
-        else
-          result = true
-        end
-      elseif unit.tranz then
-        if condtype == "cyeann" or condtype == "whit" or condtype == "pinc" then
-          result = true
-        else
-          result = false
-        end
-      elseif unit.enby then
-        if condtype == "yello" or condtype == "whit" or condtype == "purp" or condtype == "blacc" or condtype == "graey" then
-          result = true
-        else
-          result = false
-        end
       else
-        result = matchesColor(getUnitColors(unit), condtype)
+        local flags = {
+          gay = {"reed", "orang", "yello", "grun", "cyeann", "bleu", "purp", "pinc"},
+          tranz = {"cyeann", "whit", "pinc"},
+          enby = {"yello", "whit", "purp", "blacc", "graey"},
+          ace = {"blacc", "graey", "whit", "purp"},
+          pan = {"pinc", "yello", "cyeann"},
+          bi = {"pinc", "purp", "bleu"},
+          lesbab = {"reed", "orang", "whit", "pinc"},
+          aro = {"grun", "whit", "graey", "blacc"},
+          fluid = {"pinc", "whit", "blacc", "bleu"}
+        }
+        local has_flag = false
+        local matched_flag = false
+        for flag,colors in pairs(flags) do
+          if unit[flag] then
+            has_flag = true
+            if table.has_value(colors, condtype) then
+              matched_flag = true
+              break
+            end
+          end
+        end
+        if has_flag then
+          result = matched_flag
+        else
+          result = matchesColor(getUnitColors(unit), condtype)
+        end
       end
     elseif condtype == "the" then
       local the = cond.unit
@@ -1674,6 +1741,10 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
       else
         print(unit.special.customletter)
       end
+    elseif condtype == "inner" then
+      if unit == outerlvl then
+        result = false
+      end
     elseif condtype == "unlocked" then
       if unit.name == "lvl" and unit.special.visibility ~= "open" then
         result = false
@@ -1696,6 +1767,25 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
       result = matchesColor(getUnitColors(unit), getUnitColors(compare_with))
     elseif condtype == "sameface" then
       result = unit.dir == compare_with.dir
+    elseif condtype == "anti samefloat" then
+      result = sameFloat(unit, compare_with,nil,true)
+    --[[elseif condtype == "anti samepaint" then
+      local opposites = {
+        reed = "cyeann",
+        orang = "bleu",
+        yello = "purp",
+        grun = "pinc",
+        cyeann = "reed",
+        bleu = "orang",
+        purp = "yello",
+        pinc = "grun",
+        whit = "blacc",
+        graey = "graey",
+        blacc = "whit",
+        brwn = "cyeann"
+      }]]
+    elseif condtype == "anti sameface" then
+      result = unit.dir == dirAdd(compare_with.dir,4)
     elseif condtype == "oob" then
       result = not inBounds(unit.x,unit.y)
     elseif condtype == "alt" then
@@ -1715,6 +1805,82 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
     withrecursion[cond] = old_withrecursioncond
   end
   return endresult
+end
+
+--this is used 3 times now so i figure it's about time to split it into its own function
+function sideCond(unit,sets,params,count,dirs_)
+  local result = true
+  local others = {}
+  for ndir=1,8 do
+    local nx, ny = dirs8[ndir][1], dirs8[ndir][2]
+    if unit == outerlvl and surrounds ~= nil and surrounds_name == level_name then
+      --use surrounds to remember what was around the level
+      for __,on in ipairs(surrounds[nx][ny]) do -- this part hasn't been updated, but it's not important yet
+        if nameIs(on, param) then
+          table.insert(others, on)
+        end
+      end
+    else
+      local dx, dy, dir, px, py = getNextTile(unit, nx, ny, ndir)
+      mergeTable(others, getUnitsOnTile(px, py, {checkmous = true, thicc = hasProperty(unit,"thicc")}))
+    end
+  end
+  if unit == outerlvl then --basically turns into sans n't BUT the unit's rear has to be looking inbounds as well!
+    for _,param in ipairs(params) do
+      local found = 0
+      local others = findUnitsByName(param)
+      for _,on in ipairs(others) do
+        for ___,dirm in ipairs(dirs_) do
+          if not inBounds(on.x + dirm[1]*dirs8[on.dir][1], on.y + dirm[2]*dirs8[on.dir][2]) then goto cont end
+        end
+        found = found+1
+        if found >= count then break end
+        ::cont::
+      end
+      if unit == outerlvl and surrounds ~= nil and surrounds_name == level_name then
+        --use surrounds to remember what was around the level
+        for nx=-1,1 do
+          for ny=-1,1 do
+            for __,on in ipairs(surrounds[nx][ny]) do
+              if not nameIs(on, param) then goto cont end
+              for ___,dirm in ipairs(dirs_) do
+                if not (nx + dirm[1]*dirs8[on.dir][1] == 0 and ny + dirm[2]*dirs8[on.dir][2] == 0) then goto cont end
+              end
+              found = found+1
+              if found >= count then break end
+              ::cont::
+            end
+          end
+        end
+      end
+      if found < count then
+        result = false
+        break
+      end
+    end
+  else
+    for _,set in ipairs(sets) do
+      local found = 0
+      for _,other in ipairs(others) do
+        if set[other] then
+          for ___,dirm in ipairs(dirs_) do
+            local dx, dy, dir, px, py = getNextTile(other, dirm[1]*dirs8[other.dir][1], dirm[2]*dirs8[other.dir][2], other.dir)
+            if px == unit.x and py == unit.y then
+              found = found+1
+              if found >= count then goto next end
+              break
+            end
+          end
+        end
+      end
+      ::next::
+      if found < count then
+        result = false
+        break
+      end
+    end
+  end
+  return result
 end
 
 function hasLineOfSight(brite, lit)
@@ -2036,7 +2202,14 @@ function tileHasUnitName(name,x,y)
   end
 end
 
-function getUnitsOnTile(x,y,name,not_destroyed,exclude,checkmous,thicc)
+function getUnitsOnTile(x,y,o)
+  o = o or {}
+  local name = o.name
+  local not_destroyed = o.not_destroyed
+  local exclude = o.exclude
+  local checkmous = o.checkmous
+  local thicc = o.thicc
+  
   local result = {}
   for _,unit in ipairs(unitsByTile(x, y)) do
     if unit ~= exclude then
@@ -2537,6 +2710,7 @@ function mergeTable(t, other)
       end
     end
   end
+  return t
 end
 
 function fullScreen()
@@ -2614,11 +2788,22 @@ function sign(x)
   return 0
 end
 
-function sameFloat(a, b, ignorefloat)
+function countFlye(unit)
+  return countProperty(unit, "flye", true) - countProperty(unit, "anti flye", true)
+end
+function sameFloat(a, b, ignorefloat, anti)
   if ignorefloat then
     return true
+  elseif anti then
+    local tallCheck = function(a,b)
+      return (hasProperty(a, "tall", true) and countFlye(b) <= 0) or (hasProperty(a, "anti tall", true) and countFlye(b) >= 0)
+    end
+    return (-countFlye(a) == countFlye(b)) or tallCheck(a,b) or tallCheck(b,a)
   else
-    return (countProperty(a, "flye", true) == countProperty(b, "flye", true)) or hasProperty(a, "tall", true) or hasProperty(b, "tall", true)
+    local tallCheck = function(a,b)
+      return (hasProperty(a, "tall", true) and countFlye(b) >= 0) or (hasProperty(a, "anti tall", true) and countFlye(b) <= 0)
+    end
+    return (countFlye(a) == countFlye(b)) or tallCheck(a,b) or tallCheck(b,a)
   end
 end
 
@@ -2626,7 +2811,11 @@ function ignoreCheck(unit, target, property)
   if not rules_with["wont"] and not rules_with["ignor"] then
     return true
   elseif unit == target then
-    return true
+    if hasRule(unit,"ignor","themself") then
+      return false
+    else
+      return true
+    end
   elseif target and (hasRule(unit,"ignor",target) or hasRule(unit,"ignor",outerlvl)) and (not property or (not hasRule(unit,"wontn't",property))) then
     return false
   elseif property and (hasRule(unit,"wont",property)) and (not target or (not hasRule(unit,"ignorn't",target))) then
@@ -2833,7 +3022,7 @@ function loadLevels(levels, mode, level_objs, xwx)
       for j = -1,1 do
         surrounds[i][j] = {}
         for _,lvl in ipairs(level_objs) do
-          for __,stuff in ipairs(getUnitsOnTile(lvl.x+i,lvl.y+j,nil,false,lvl)) do
+          for __,stuff in ipairs(getUnitsOnTile(lvl.x+i,lvl.y+j,{exclude = lvl})) do
             table.insert(surrounds[i][j], stuff)
           end
         end
@@ -2959,7 +3148,7 @@ function timecheck(unit,verb,prop)
       end
     end
   else
-    zw_pass = true
+    zw_pass = not hasProperty(unit,"anti zawarudo")
   end
   local rhythm_pass = false
   if rules_with["rythm"] then
@@ -3464,7 +3653,9 @@ function drawCustomLetter(text, x, y, rot, sx, sy, ox, oy)
   love.graphics.translate(-(ox or 0), -(oy or 0))
   for i,q in ipairs(custom_letter_quads[#(text or "-")]) do
     local quad, dx, dy = unpack(q)
-    love.graphics.draw(sprites["letters_"..(text:sub(i,i) or "a")] or sprites["wut"], quad, dx, dy)
+    local char = text:sub(i,i)
+    if char == "*" then char = "asterisk" end
+    love.graphics.draw(sprites["letters_"..char] or sprites["wut"], quad, dx, dy)
   end
   love.graphics.pop()
 end
@@ -3527,9 +3718,21 @@ function buildOptions()
     scene.addOption("autoupdate", "autoupdate (experimental)", {{"on", true}, {"off", false}})
     scene.addButton("video options", function() display = true; scene.buildUI() end)
     scene.addButton("default settings", function () defaultSetting() scene.buildUI() end)
+    if scene == menu then
+      scene.addButton("delete save data", function ()
+        ui.overlay.confirm({
+          text = "Delete save data?\nLÖVE will restart\n\n(WARNING: Data cannot be restored)",
+          okText = "Yes",
+          cancelText = "Cancel",
+          ok = function()
+            deleteDir("profiles")
+            love.event.quit("restart")
+          end})
+      end)
+    end
     scene.addButton("back", function() options = false; scene.buildUI() end)
   else
-    scene.addOption("game_scale", "game scale", {{"auto", "auto"}, {"0.5x", 0.5}, {"1x", 1}, {"1.5x", 1.5}, {"2x", 2}, {"4x", 4}})
+    scene.addOption("int_scaling", "integer scaling", {{"on", true}, {"off", false}})
     scene.addOption("particles_on", "particle effects", {{"on", true}, {"off", false}})
     scene.addOption("shake_on", "shakes", {{"on", true}, {"off", false}})
     scene.addOption("scribble_anim", "animated scribbles", {{"on", true}, {"off", false}})
@@ -3767,6 +3970,14 @@ function addTile(tile)
     end
   end
 
+  if not tile.pronouns then
+    if not tile.is_text and table.has_value(tile.tags, "chars") then
+      tile.pronouns = {"they", "them"}
+    else
+      tile.pronouns = {"it"}
+    end
+  end
+
 
   tiles_list[tile.name] = tile
   for _,old in ipairs(tile.old_names) do
@@ -3812,6 +4023,7 @@ function getTile(name, old)
     tile.display = tile.display .. " n't"
     tile.sprite = tile.metasprite or tile.sprite
     tile.nt = true
+    tile.pronouns = {"it"}
     tile.old_names = {}
 
     return addTile(tile)
@@ -3829,29 +4041,13 @@ function getTile(name, old)
     tile.txtname = "txt_" .. tile.txtname
     tile.is_text = true
     tile.meta = tile.meta + 1
+    tile.pronouns = {"it"}
     tile.old_names = {}
     if tile.layer < 20 then
       tile.layer = 20
     end
 
     return addTile(tile)
-  end
-end
-
-function initializeTiles(tiles)
-  tiles_list = {}
-  tiles_by_old_name = {}
-  text_list = {}
-  text_in_tiles = {}
-  wobble_text_list = {}
-  wobble_text_in_tiles = {}
-  group_names = {}
-  group_names_nt = {}
-  group_names_set = {}
-  group_names_set_nt = {}
-  group_subsets = {}
-  for _,tile in ipairs(tiles) do
-    addTile(tile)
   end
 end
 
@@ -3904,7 +4100,7 @@ function getTileSprite(name, tile, o)
     end
 
     if tile.wobble then
-      local wobble_frame = (o.wobble + anim_stage) % 3 + 1
+      local wobble_frame = anim_stage % 3 + 1
       addTry(try, "?_"..wobble_frame, true)
     end
   end
@@ -3968,20 +4164,73 @@ function getUnitSprite(name, unit)
       addTry(try, "lin_gate")
     elseif name == "lin" and unit.special.visibility == "hidden" then
       addTry(try, "lin_hidden")
-    -- overlay properties
-    elseif name == "txt/gay-colored" and not unit.active then
-      addTry(try, "txt/gay")
-    elseif name == "txt/tranz-colored" and not unit.active then
-      addTry(try, "txt/tranz")
-    elseif name == "txt/enby-colored" and not unit.active then
-      addTry(try, "txt/enby")
     -- misc
     elseif name == "txt/now" and doing_past_turns then
       addTry(try, "txt/latr")
+    elseif name == "txt/themself" and scene == game and rules_with_unit[unit] then
+      local pronoun
+      for _,rules in ipairs(rules_with_unit[unit]) do
+        local name = rules.rule.subject.name 
+        if name:ends("n't") or name == "every1" or name == "every2" or name == "every3" or group_names_set[name] then
+          pronoun = "them"
+          break
+        end
+        local subject = rules.rule.subject.unit and getTile(rules.rule.subject.unit.textname)
+        if subject then
+          local new_pronoun
+          if subject.pronouns and subject.pronouns[1] == "genderfluid" then
+            local cycle_pronouns = {"them", "her", "it", "xem", "him", "hir"}
+            new_pronoun = cycle_pronouns[(math.floor(love.timer.getTime()/0.18) + unit.tempid) % #cycle_pronouns + 1].."self"
+          else
+            new_pronoun = (subject.pronouns and (subject.pronouns[2] or subject.pronouns[1]) or "it").."self"
+          end
+          if pronoun and pronoun ~= new_pronoun then
+            pronoun = "themself"
+          else
+            pronoun = new_pronoun
+          end
+          if pronoun == "themself" then break end
+        else
+          if pronoun and pronoun ~= "itself" then
+            pronoun = "themself"
+            break
+          else
+            pronoun = "itself"
+          end
+        end
+      end
+      pronoun = pronoun or "itself"
+      addTry(try, "txt/"..pronoun)
+    elseif name == "txt/themself_lower" and scene == game and rules_with_unit[unit] then
+      local has_multiple = false
+      local last_units
+      for _,rules in ipairs(rules_with_unit[unit]) do
+        local name = rules.rule.subject.name 
+        if name:ends("n't") or name == "every1" or name == "every2" or name == "every3" or name == "lethers" or name == "numa" or name == "yuiy" or group_names_set[name] then
+          has_multiple = true
+          break
+        elseif not last_units then
+          last_units = rules.units
+        elseif not eq(last_units, rules.units) then
+          has_multiple = true
+          break
+        end
+      end
+      if has_multiple then
+        addTry(try, "txt/themselves_lower")
+      end
     end
 
     for type,name in pairs(unit.sprite_transforms) do
-      if table.has_value(unit.used_as, type) then
+      if type == "inactive" then
+        if not unit.active then
+          addTry(try, name)
+        end
+      elseif type == "active" then
+        if unit.active then
+          addTry(try, name)
+        end
+      elseif table.has_value(unit.used_as, type) then
         addTry(try, name)
         break
       end
@@ -4055,7 +4304,7 @@ function drawUnitSprite(unit, x, y, rotation, sx, sy, o)
   local brightness = 1
 
   if scene == game then
-    if ((unit.type == "txt" and not hasRule(unit,"ben't","wurd")) or hasRule(unit,"be","wurd")) and not unit.active and not level_destroyed and not (unit.fullname == "prop") then
+    if (hasRule(unit,"be","wurd") or hasRule(unit,"be","anti wurd")) and not unit.active and not level_destroyed and not (unit.fullname == "prop") then
       brightness = 0.33
     end
     if (unit.name == "steev") and not hasU(unit) then
@@ -4077,8 +4326,10 @@ function drawUnitSprite(unit, x, y, rotation, sx, sy, o)
     overlay = unit.overlay,
     meta = unit.meta,
     nt = unit.nt,
+    alpha = unit.draw.opacity,
     brightness = brightness,
     id = unit.id,
+    frame = unit.frame,
     wobble = unit.wobble,
     delet = unit.delet,
     really_smol = unit.fullname == "babby",
@@ -4099,7 +4350,9 @@ function drawSprite(x, y, rotation, sx, sy, o)
     alpha = 1,
     brightness = 1,
     id = 0,
+    frame = x+y,
     wobble = false,
+    anti_wobble = false,
     delet = false,
     really_smol = false,
     lvl = false,
@@ -4160,7 +4413,8 @@ function drawSprite(x, y, rotation, sx, sy, o)
           end
           if not onlycolor or o.painted[i] then
             if image == "letter_custom" then
-              if o.special.customletter then
+              --if #o.special.customletter == 1 then 
+              if o.special.customletter and (#o.special.customletter > 1 or sprites["letter_"..o.special.customletter]) then
                 drawCustomLetter(o.special.customletter, x, y, rotation, sx, sy, 16, 16)
               else
                 local sprite = sprites["wut"]
@@ -4174,6 +4428,20 @@ function drawSprite(x, y, rotation, sx, sy, o)
         end
       end
     end
+  end
+
+  love.graphics.push()
+  if settings["max_wobble"] and not o.anti_wobble and not o.wobble and o.sprite[1] ~= "bordr" then
+    local wobble_frame = (o.frame + anim_stage) % 3 + 1
+    love.graphics.translate(x + max_w/TILE_SIZE/2, y + max_h/TILE_SIZE/2)
+    if wobble_frame == 2 then
+      love.graphics.rotate(math.rad(3))
+      love.graphics.scale(1, 0.95)
+    elseif wobble_frame == 3 then
+      love.graphics.rotate(math.rad(-3))
+      love.graphics.shear(-0.05, 0)
+    end
+    love.graphics.translate(-x - max_w/TILE_SIZE/2, -y - max_h/TILE_SIZE/2)
   end
 
   if (o.delet or spookmode) and (math.floor(love.timer.getTime() * 9) % 9 == 0) then -- if we're delet, apply the special shader to our object
@@ -4247,6 +4515,8 @@ function drawSprite(x, y, rotation, sx, sy, o)
     end
   end
 
+  love.graphics.pop()
+
   if o.meta > 0 then
     setColor{4, 1}
     local metasprite = o.meta == 2 and sprites["meta2"] or sprites["meta1"]
@@ -4304,4 +4574,63 @@ function findNumber(unit1,unit2,unit3)
   if not t3 then return t1..t2,2 end
 
   return t1..t2..t3,3
+end
+
+function getUnitStr(unit)
+  local str = unit.fullname
+  if unit.color_override then
+    str = str .. "|" .. table.concat(unit.color_override, ",")
+  end
+  return str
+end
+
+function loadMod()
+  if love.filesystem.getInfo(getWorldDir(true).."/assets/lua/mod.lua") then
+    local lua_dir = getWorldDir(true).."/assets/lua"
+    local old_require_path = love.filesystem.getRequirePath()
+    love.filesystem.setRequirePath(lua_dir.."/?.lua;"..lua_dir.."/?/init.lua")
+    local mod = love.filesystem.load(lua_dir.."/mod.lua")()
+    if type(mod) == "table" then
+      loaded_mod = mod
+      if mod.load then
+        mod.load()
+      end
+      if mod.createTab then
+        local grid = mod.createTab()
+        local tab = #tile_grid + 1
+
+        table.insert(selector_grid_contents, grid)
+        tile_grid[tab] = {}
+        for i,tile_name in ipairs(grid) do
+          if i then
+            tile_grid[tab][i-1] = tile_name
+          else
+            tile_grid[tab][i-1] = nil
+          end
+        end
+
+        custom_selector_grid = grid
+        custom_selector_tab = tab
+      end
+    end
+    love.filesystem.setRequirePath(old_require_path)
+  end
+end
+
+function unloadMod()
+  if loaded_mod then
+    if loaded_mod.unload() then
+      loaded_mod.unload()
+    end
+    if custom_selector_tab then
+      tile_grid[custom_selector_tab] = nil
+      selector_grid_contents[custom_selector_tab] = nil
+      if secret_miku_location and secret_miku_location[1] == custom_selector_tab then
+        secret_miku_location = nil
+      end
+      custom_selector_grid = nil
+      custom_selector_tab = nil
+    end
+    loaded_mod = nil
+  end
 end

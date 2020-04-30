@@ -157,6 +157,11 @@ function undoOneAction(turn, i, v, ignore_no_undo)
   elseif action == "timeless_reset_remove" then
     --causes an infinite loop, and kind of meaningless by definition I guess
     --timeless_reset = true
+  elseif action == "timeless_replay_add" then
+    timeless_replay = false
+  elseif action == "timeless_replay_remove" then
+    --actually not meaningless by definition since you can undo winning
+    timeless_replay = true
   elseif action == "timeless_crash_add" then
 		timeless_crash = false
   elseif action == "timeless_crash_remove" then
@@ -274,7 +279,7 @@ function scanAndRecreateOldUnit(turn, i, unit_id, created_from_id, ignore_no_und
         --no exponential cloning if gras turned into 2 rocs - abort if there's already a unit with that name on that tile
         local tile, x, y = v[2], v[3], v[4]
         local data = getTile(tile)
-        local stuff = getUnitsOnTile(x, y, nil, true)
+        local stuff = getUnitsOnTile(x, y, {not_destroyed = true})
         for _,on in ipairs(stuff) do
           if on.name == data.name then
             return

@@ -112,7 +112,7 @@ function scene.load()
   scene.setupGooi()
 
   clear()
-  resetMusic(map_music, 0.5)
+  resetMusic(map_music, 0.1)
   loadMap()
   local now = os.time(os.date("*t"))
   presence = {
@@ -380,19 +380,27 @@ w = w-h, h = h}):center():setGroup("settings")
   local y = love.graphics.getHeight()/2 - tile_grid_height*16 - 32
   
   for i=1,#tile_grid do
-    local j = i
+    local tab_name = custom_selector_tab == i and "custom" or i
     local button = gooi.newButton({text = "", x = x + 64*i, y = y, w = 64, h = 32}):onRelease(function()
-      selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_"..selector_page], sprites["ui/selector_tab_"..selector_page.."_h"])
-      selector_page = j
+      if selector_page == custom_selector_tab then
+        selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_custom"], sprites["ui/selector_tab_custom_h"])
+      else
+        selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_"..selector_page], sprites["ui/selector_tab_"..selector_page.."_h"])
+      end
+      selector_page = i
       current_tile_grid = tile_grid[selector_page]
-      selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_"..j.."_a"])
+      selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_"..tab_name.."_a"])
     end)
-    button:setBGImage(sprites["ui/selector_tab_"..i], sprites["ui/selector_tab_"..i.."_h"]):bg({0, 0, 0, 0})
+    button:setBGImage(sprites["ui/selector_tab_"..tab_name], sprites["ui/selector_tab_"..tab_name.."_h"]):bg({0, 0, 0, 0})
     button:setVisible(selector_open)
     button:setEnabled(selector_open)
     selector_tab_buttons_list[i] = button
   end
-  selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_"..selector_page.."_a"], sprites["ui/selector_tab_"..selector_page.."_h"])
+  if selector_page == custom_selector_tab then
+    selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_custom_a"], sprites["ui/selector_tab_custom_h"])
+  else
+    selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_"..selector_page.."_a"], sprites["ui/selector_tab_"..selector_page.."_h"])
+  end
   -- gooi.setGroupVisible("selectortabs", selector_open)
   -- gooi.setGroupEnabled("selectortabs", selector_open)
   updateSelectorTabs()
@@ -505,18 +513,24 @@ function scene.keyPressed(key)
           selector_open = false
           searchstr, subsearchstr = "", ""
         end
-      elseif key_down["lctrl"] or key_down["rctrl"] then
+      elseif key_down["lctrl"] or key_down["rctrl"] then 
         if getTile("letter_"..subsearchstr) then
           brush.id = "letter_"..subsearchstr
           brush.special = {}
           selector_open = false
           searchstr, subsearchstr = "", ""
-        elseif #subsearchstr >= 1 and #subsearchstr <= 6 then
+        else
+          local magic = {"%", "(", ")", ".", "+", "-", "*", "?", "[", "^", "$"}
+          for _,char in ipairs(magic) do
+            subsearchstr = subsearchstr:gsub("%%%"..char, "%"..char)
+          end
+          if #subsearchstr >= 1 and #subsearchstr <= 6 then
           brush.id = "letter_custom"
           brush.special = {customletter = subsearchstr}
           --brush.customletter = subsearchstr
           selector_open = false
           searchstr, subsearchstr = "", ""
+          end
         end
       else
         if getTile(subsearchstr) and not getTile(subsearchstr).unsearchable and (settings["baba"] or not getTile(subsearchstr).wobble) then
@@ -586,6 +600,7 @@ function scene.keyPressed(key)
     end
     subsearchstr = searchstr:gsub(" ","")
 
+    -- i commented this out bc it broke creating custom letters, idk what it's supposed to do but this commentingmight break smth
     local magic = {"%", "(", ")", ".", "+", "-", "*", "?", "[", "^", "$"}
     for _,char in ipairs(magic) do
       subsearchstr = subsearchstr:gsub("%"..char, "%%%"..char)
@@ -684,7 +699,11 @@ function scene.keyPressed(key)
   
   -- ctrl tab shortcuts
   local old_selector_page = selector_page
-  selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_"..selector_page], sprites["ui/selector_tab_"..selector_page.."_h"])
+  if selector_page == custom_selector_tab then
+    selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_custom"], sprites["ui/selector_tab_custom_h"])
+  else
+    selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_"..selector_page], sprites["ui/selector_tab_"..selector_page.."_h"])
+  end
   
   if key == "tab" and (key_down["lctrl"] or key_down["rctrl"]) and not (key_down["lshift"] or key_down["rshift"]) then
     selector_page = selector_page % #tile_grid + 1
@@ -698,7 +717,11 @@ function scene.keyPressed(key)
   if (old_selector_page ~= selector_page) then
     current_tile_grid = tile_grid[selector_page]
     -- print(dump(selector_tab_buttons_list))
-    selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_"..selector_page.."_a"], sprites["ui/selector_tab_"..selector_page.."_h"])
+    if selector_page == custom_selector_tab then
+      selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_custom_a"], sprites["ui/selector_tab_custom_h"])
+    else
+      selector_tab_buttons_list[selector_page]:setBGImage(sprites["ui/selector_tab_"..selector_page.."_a"], sprites["ui/selector_tab_"..selector_page.."_h"])
+    end
   end
   
   --create and display meta tiles 1 higher
@@ -1005,17 +1028,18 @@ function scene.update(dt)
       else
         label_palette:setIcon()
       end
-      if not sound_exists[input_music:getText()] then
+      if not music_path[input_music:getText()] then
         label_music:setIcon(sprites["ui/smol warning"])
       else
         label_music:setIcon()
       end
     elseif (not settings_open or not mouseOverBox(settings_ui.x, settings_ui.y, settings_ui.w, settings_ui.h)) and not level_dialogue.enabled then
       local hx,hy = getHoveredTile()
-      if hx ~= nil and ((selector_open and inBounds(hx, hy)) or (not selector_open and inBounds(hx, hy, true))) then
-        local tileid = hx + hy * mapwidth
-
-        local hovered = {}
+      local ctrl_active = key_down["lctrl"] or key_down["rctrl"] or (is_mobile and mobile_stackmode == "ctrl")
+      local shift_active = key_down["lshift"] or key_down["rshift"] or (is_mobile and mobile_stackmode == "shift") or ctrl_active
+      local tileid = hx..","..hy
+      local hovered = {}
+      if hx ~= nil and ((selector_open and inBounds(hx, hy)) or (not selector_open)) then
         if unitsByTile(hx, hy) then
           for _,v in ipairs(unitsByTile(hx, hy)) do
             table.insert(hovered, v)
@@ -1028,15 +1052,13 @@ function scene.update(dt)
             local new_unit = nil
             local existing = nil
             local ctrl_first_press = false
-            local ctrl_active = key_down["lctrl"] or key_down["rctrl"] or (is_mobile and mobile_stackmode == "ctrl")
-            local shift_active = key_down["lshift"] or (is_mobile and mobile_stackmode == "shift") or ctrl_active
             if ctrl_active and brush.mode == "none" then
               ctrl_first_press = true
             end
             if #hovered >= 1 then
               for _,unit in ipairs(hovered) do
                 if unit.tile == brush.id and (unit.tile ~= getTile("letter_custom") or unit.special.customletter == brush.special.customletter)
-                  and matchesColor(unit.color_override, brush.color, true) then
+                and matchesColor(unit.color_override, brush.color, true) then
                   if not (ctrl_active or selectorhold) then
                     existing = unit
                   end
@@ -1064,7 +1086,7 @@ function scene.update(dt)
                   existing.dir = brush.dir
                   painted = true
                   new_unit = existing
-                elseif (not ctrl_active or ctrl_first_press) and (not is_mobile or mobile_firstpress) then
+                elseif (not ctrl_active or ctrl_first_press) and (not is_mobile or mobile_firstpress) and (inBounds(hx,hy) or shift_active) then
                   new_unit = createUnit(brush.id, hx, hy, brush.dir)
                   if type(brush.color) == "string" then
                     new_unit[brush.color] = true
@@ -1108,42 +1130,42 @@ function scene.update(dt)
           end
           mobile_firstpress = false
         end
-        if (love.mouse.isDown(2) or (is_mobile and mobile_picking and love.mouse.isDown(1))) and not selector_open then
-          if brush.mode ~= "picking" then
-            if #hovered >= 1 then
-              brush.picked_tile = tileid
-              if brush.picked_tile == tileid and brush.picked_index > 0 then
-                local new_index = brush.picked_index + 1
-                if new_index > #hovered then
-                  new_index = 1
-                end
-                brush.picked_index = new_index
-                brush.id = hovered[new_index].tile
-                brush.color = hovered[new_index].color_override
-                --brush.customletter = hovered[new_index].special.customletter
-                if hovered[new_index].name == "lin" then
-                  last_lin_hidden = (hovered[new_index].special.visibility == "hidden")
-                end
-                brush.special = hovered[new_index].special
-              else
-                brush.id = hovered[1].tile 
-                brush.color = hovered[1].color_override
-                --brush.customletter = hovered[1].special.customletter
-                if hovered[1].name == "lin" then
-                  last_lin_hidden = (hovered[1].special.visibility == "hidden")
-                end
-                brush.special = hovered[1].special
-                brush.picked_index = 1
+      end
+      if (love.mouse.isDown(2) or (is_mobile and mobile_picking and love.mouse.isDown(1))) and not selector_open then
+        if brush.mode ~= "picking" then
+          if #hovered >= 1 then
+            brush.picked_tile = tileid
+            if brush.picked_tile == tileid and brush.picked_index > 0 then
+              local new_index = brush.picked_index + 1
+              if new_index > #hovered then
+                new_index = 1
               end
-              brush.mode = "picking"
+              brush.picked_index = new_index
+              brush.id = hovered[new_index].tile
+              brush.color = hovered[new_index].color_override
+              --brush.customletter = hovered[new_index].special.customletter
+              if hovered[new_index].name == "lin" then
+                last_lin_hidden = (hovered[new_index].special.visibility == "hidden")
+              end
+              brush.special = hovered[new_index].special
             else
-              brush.id = nil
-              brush.special = {}
-              brush.picked_tile = nil
-              brush.picked_index = 0
-              brush.color = nil
-              mobile_picking = false
+              brush.id = hovered[1].tile 
+              brush.color = hovered[1].color_override
+              --brush.customletter = hovered[1].special.customletter
+              if hovered[1].name == "lin" then
+                last_lin_hidden = (hovered[1].special.visibility == "hidden")
+              end
+              brush.special = hovered[1].special
+              brush.picked_index = 1
             end
+            brush.mode = "picking"
+          else
+            brush.id = nil
+            brush.special = {}
+            brush.picked_tile = nil
+            brush.picked_index = 0
+            brush.color = nil
+            mobile_picking = false
           end
         end
       end
@@ -1192,31 +1214,47 @@ end
 
 function scene.transformParameters()
   local roomwidth, roomheight
+  local targetwidth, targetheight
 
   if not selector_open then
     roomwidth = mapwidth * TILE_SIZE
     roomheight = mapheight * TILE_SIZE
+
+    targetwidth = (mapwidth + 4) * TILE_SIZE
+    targetheight = (mapheight + 4) * TILE_SIZE
   else
     roomwidth = tile_grid_width * TILE_SIZE
     roomheight = tile_grid_height * TILE_SIZE
+
+    targetwidth = (tile_grid_width + 4) * TILE_SIZE
+    targetheight = (tile_grid_height + 4) * TILE_SIZE + 64
   end
 
   local screenwidth = love.graphics.getWidth() * (is_mobile and 0.75 or 1)
   local screenheight = love.graphics.getHeight() - (is_mobile and sprites["ui/cog"]:getHeight() or 0)
 
-  local scales = {0.25, 0.375, 0.5, 0.75, 1, 2, 3, 4}
-  if selector_open then
-    table.insert(scales, 6, 1.5)
+  if settings["int_scaling"] then
+    targetwidth = roomwidth
+    targetheight = roomheight
+    if selector_open then
+      targetheight = targetheight + 64
+    end
   end
 
-  local scale = scales[1]
-  for _,s in ipairs(scales) do
-    if screenwidth >= roomwidth * s and screenheight >= roomheight * s + (selector_open and 120 or 0) then
-        scale = s
-    else break end
-  end
-  if settings["game_scale"] ~= "auto" and settings["game_scale"] < scale then
-    scale = settings["game_scale"]
+  local scale = 1
+  if settings["int_scaling"] then
+    local scales = {0.25, 0.375, 0.5, 0.75, 1, 2, 3, 4}
+    if selector_open then
+      table.insert(scales, 6, 1.5)
+    end
+    scale = scales[1]
+    for _,s in ipairs(scales) do
+      if screenwidth >= roomwidth * s and screenheight >= roomheight * s + (selector_open and 120 or 0) then
+          scale = s
+      else break end
+    end
+  else
+    scale = math.min(screenwidth / targetwidth, screenheight / targetheight)
   end
 
   local scaledwidth = screenwidth * (1/scale)
@@ -1463,7 +1501,7 @@ function scene.draw(dt)
               color = getTileColors(tile, brush.color)
             end
 
-            drawTileSprite(tile, (x+0.5)*TILE_SIZE, (y+0.5)*TILE_SIZE, 0, 1, 1, {color = color})
+            drawTileSprite(tile, (x+0.5)*TILE_SIZE, (y+0.5)*TILE_SIZE, 0, 1, 1, {color = color, anti_wobble = true})
 
             if brush.id == i then
               love.graphics.setColor(1, 0, 0)
@@ -1919,15 +1957,19 @@ end
 function scene.updateMap()
   map_ver = 5
   local map = {}
+  --[[
   for x = 0, mapwidth-1 do
     for y = 0, mapheight-1 do
-      local tileid = x + y * mapwidth
       if unitsByTile(x, y) then
         for _,unit in ipairs(unitsByTile(x, y)) do
           table.insert(map, {id = unit.id, tile = unit.tile, x = unit.x, y = unit.y, dir = unit.dir, special = unit.special, color = unit.color_override})
         end
       end
     end
+  end
+  ]]
+  for _,unit in ipairs(units) do
+    table.insert(map, {id = unit.id, tile = unit.tile, x = unit.x, y = unit.y, dir = unit.dir, special = unit.special, color = unit.color_override})
   end
   local info = {
     name = level_name,
@@ -2056,10 +2098,7 @@ function scene.saveSettings()
   else
     input_palette:primary()
   end
-  if not sound_exists[input_music:getText()] then
-    success = false
-    input_music:danger()
-  else
+  if music_path[input_music:getText()] then
     input_music:primary()
   end
   if not success then
@@ -2284,8 +2323,13 @@ function scene.getCaptureRect()
 
     return rect
   else
-    local start_x, start_y = screenToGameTile(start_drag.x, start_drag.y)
-    local current_x, current_y = screenToGameTile(love.mouse.getX(), love.mouse.getY())
+    local start_x, start_y = screenToGameTile(start_drag.x, start_drag.y, true)
+    local current_x, current_y = screenToGameTile(love.mouse.getX(), love.mouse.getY(), true)
+    
+    start_x = math.floor(start_x*2)/2
+    start_y = math.floor(start_y*2)/2
+    current_x = math.floor(current_x*2)/2
+    current_y = math.floor(current_y*2)/2
 
     local min_x, min_y = math.min(start_x, current_x), math.min(start_y, current_y)
     local max_x, max_y = math.max(start_x, current_x), math.max(start_y, current_y)
