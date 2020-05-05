@@ -46,6 +46,7 @@ function clear()
   outerlvl = nil
   still_converting = {}
   portaling = {}
+  zomb_undos = {}
   rules_effecting_names = {}
   referenced_objects = {}
   referenced_text = {}
@@ -149,8 +150,11 @@ end
 function initializeGraphicalPropertyCache()
   local properties_to_init = -- list of properties that require the graphical cache
   {
-    "flye", "slep", "stelth", "colrful", "delet", "rave", "tranz", "gay", "enby", "ace", "pan", "bi", "lesbab", "aro", "fluid" -- miscelleaneous graphical effects
+    "flye", "slep", "stelth", "colrful", "delet", "rave" -- miscelleaneous graphical effects
   }
+  for name,_ in pairs(overlay_props) do -- add overlays
+    table.insert(properties_to_init, name)
+  end
   for i = 1, #properties_to_init do
     local prop = properties_to_init[i]
     if (graphical_property_cache[prop] == nil) then graphical_property_cache[prop] = {} end
@@ -1666,23 +1670,12 @@ function testConds(unit, conds, compare_with, first_unit) --cond should be a {co
       elseif unit.rave or unit.colrful then
         result = true
       else
-        local flags = {
-          gay = {"reed", "orang", "yello", "grun", "cyeann", "bleu", "purp", "pinc"},
-          tranz = {"cyeann", "whit", "pinc"},
-          enby = {"yello", "whit", "purp", "blacc", "graey"},
-          ace = {"blacc", "graey", "whit", "purp"},
-          pan = {"pinc", "yello", "cyeann"},
-          bi = {"pinc", "purp", "bleu"},
-          lesbab = {"reed", "orang", "whit", "pinc"},
-          aro = {"grun", "whit", "graey", "blacc"},
-          fluid = {"pinc", "whit", "blacc", "bleu"}
-        }
         local has_flag = false
         local matched_flag = false
-        for flag,colors in pairs(flags) do
+        for flag,overlay in pairs(overlay_props) do
           if unit[flag] then
             has_flag = true
-            if table.has_value(colors, condtype) then
+            if table.has_value(overlay.colors, condtype) then
               matched_flag = true
               break
             end
@@ -2388,6 +2381,23 @@ function addParticles(ptype,x,y,color,count)
   if doing_past_turns and not do_past_effects then return end
   
   if not settings["particles_on"] then return end
+
+  local particle_colors = {}
+  if type(color[1]) ~= "table" then
+    if #color == 2 then
+      particle_colors = {getPaletteColor(color[1], color[2])}
+    else
+      particle_colors = {color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255}
+    end
+  else
+    for _,single_color in ipairs(color) do
+      if #single_color == 2 then
+        table.insert_range(particle_colors, {getPaletteColor(single_color[1], single_color[2])})
+      else
+        table.insert_range(particle_colors, {single_color[1]/255, single_color[2]/255, single_color[3]/255, (single_color[4] or 255)/255})
+      end
+    end
+  end
   
   if ptype == "destroy" then
     local ps = love.graphics.newParticleSystem(sprites["circle"])
@@ -2400,11 +2410,7 @@ function addParticles(ptype,x,y,color,count)
     ps:setSpeed(50)
     ps:setLinearDamping(5)
     ps:setParticleLifetime(0.25)
-    if #color == 2 then
-      ps:setColors(getPaletteColor(color[1], color[2]))
-    else
-      ps:setColors(color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255)
-    end
+    ps:setColors(unpack(particle_colors))
     ps:start()
     ps:emit(count or 20)
     table.insert(particles, ps)
@@ -2419,11 +2425,7 @@ function addParticles(ptype,x,y,color,count)
     ps:setSpeed(50)
     ps:setLinearDamping(4)
     ps:setParticleLifetime(0.25)
-    if #color == 2 then
-      ps:setColors(getPaletteColor(color[1], color[2]))
-    else
-      ps:setColors(color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255)
-    end
+    ps:setColors(unpack(particle_colors))
     ps:start()
     ps:emit(count or 10)
     table.insert(particles, ps)
@@ -2439,11 +2441,7 @@ function addParticles(ptype,x,y,color,count)
     ps:setSpeed(30)
     ps:setLinearDamping(2)
     ps:setParticleLifetime(0.6)
-    if #color == 2 then
-      ps:setColors(getPaletteColor(color[1], color[2]))
-    else
-      ps:setColors(color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255)
-    end
+    ps:setColors(unpack(particle_colors))
     ps:start()
     ps:emit(count or 10)
     table.insert(particles, ps)
@@ -2458,11 +2456,7 @@ function addParticles(ptype,x,y,color,count)
     ps:setSpeed(-40)
     ps:setLinearDamping(2)
     ps:setParticleLifetime(0.6)
-    if #color == 2 then
-      ps:setColors(getPaletteColor(color[1], color[2]))
-    else
-      ps:setColors(color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255)
-    end
+    ps:setColors(unpack(particle_colors))
     ps:start()
     ps:emit(count or 10)
     table.insert(particles, ps)
@@ -2477,11 +2471,7 @@ function addParticles(ptype,x,y,color,count)
     ps:setSpeed(30)
     ps:setLinearDamping(2)
     ps:setParticleLifetime(0.6)
-    if #color == 2 then
-      ps:setColors(getPaletteColor(color[1], color[2]))
-    else
-      ps:setColors(color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255)
-    end
+    ps:setColors(unpack(particle_colors))
     ps:start()
     ps:emit(count or 10)
     table.insert(particles, ps)
@@ -2495,11 +2485,7 @@ function addParticles(ptype,x,y,color,count)
     ps:setSizes(0.5, 0.5, 0.5, 0)
     ps:setSpeed(20)
     ps:setParticleLifetime(1)
-    if #color == 2 then
-      ps:setColors(getPaletteColor(color[1], color[2]))
-    else
-      ps:setColors(color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255)
-    end
+    ps:setColors(unpack(particle_colors))
     ps:start()
     ps:emit(count or 10)
     table.insert(particles, ps)
@@ -2513,11 +2499,7 @@ function addParticles(ptype,x,y,color,count)
     ps:setSizes(0.7, 0.7, 0.7, 0)
     ps:setSpeed(math.random(10,20))
     ps:setParticleLifetime(math.random(1,2))
-    if #color == 2 then
-      ps:setColors(getPaletteColor(color[1], color[2]))
-    else
-      ps:setColors(color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255)
-    end
+    ps:setColors(unpack(particle_colors))
     ps:start()
     ps:emit(count or 10)
     table.insert(particles, ps)
@@ -2532,11 +2514,7 @@ function addParticles(ptype,x,y,color,count)
     ps:setSpeed(10)
     ps:setLinearAcceleration(0,-50)
     ps:setParticleLifetime(2)
-    if #color == 2 then
-      ps:setColors(getPaletteColor(color[1], color[2]))
-    else
-      ps:setColors(color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255)
-    end
+    ps:setColors(unpack(particle_colors))
     ps:start()
     ps:emit(count or 10)
     table.insert(particles, ps)
@@ -2551,11 +2529,7 @@ function addParticles(ptype,x,y,color,count)
     ps:setSpeed(10)
     ps:setLinearAcceleration(0,-50)
     ps:setParticleLifetime(2)
-    if #color == 2 then
-      ps:setColors(getPaletteColor(color[1], color[2]))
-    else
-      ps:setColors(color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255)
-    end
+    ps:setColors(unpack(particle_colors))
     ps:start()
     ps:emit(count or 10)
     table.insert(particles, ps)
@@ -2571,11 +2545,7 @@ function addParticles(ptype,x,y,color,count)
     ps:setSpeed(math.random(30, 40))
     ps:setLinearDamping(5)
     ps:setParticleLifetime(math.random(0.50, 1.10))
-    if #color == 2 then
-      ps:setColors(getPaletteColor(color[1], color[2]))
-    else
-      ps:setColors(color[1]/255, color[2]/255, color[3]/255, (color[4] or 255)/255)
-    end
+    ps:setColors(unpack(particle_colors))
     ps:start()
     ps:emit(count or 1)
     table.insert(particles, ps)
@@ -2709,6 +2679,34 @@ function mergeTable(t, other)
         end
       end
     end
+  end
+  return t
+end
+
+function mergeTable(t, other)
+  if other ~= nil then
+    for k,v in pairs(other) do
+      if type(k) == "number" then
+        if not table.has_value(t, v) then
+          table.insert(t, v)
+        end
+      else
+        if t[k] ~= nil then
+          if type(t[k]) == "table" and type(v) == "table" then
+            mergeTable(t[k], v)
+          end
+        else
+          t[k] = v
+        end
+      end
+    end
+  end
+  return t
+end
+
+function table.insert_range(t, other)
+  for _,v in ipairs(other) do
+    table.insert(t, v)
   end
   return t
 end
@@ -3998,7 +3996,11 @@ function addTile(tile)
 
   if tile.typeset.group then
     addGroup(tile.txtname)
-	end
+  end
+  
+  if tile.overlay then
+    overlay_props[tile.txtname] = tile.overlay
+  end
 
   return tile
 end

@@ -1062,16 +1062,18 @@ function updateUnits(undoing, big_update)
       local stuff = getUnitsOnTile(unit.x, unit.y, {not_destroyed = true, checkmous = true, thicc = hasProperty(unit,"thicc")})
       for _,on in ipairs(stuff) do
         if (unit ~= on or ruleparent[1].rule.object.name == "themself") and hasRule(unit, "snacc", on) and sameFloat(unit, on) and ignoreCheck(on, unit) then
-          if timecheck(unit,"snacc",on) and timecheck(on) then
-            table.insert(to_destroy, on)
-            playSound("snacc")
-            shakeScreen(0.3, 0.15)
-          else
-            table.insert(time_destroy,{on.id,timeless})
-						addUndo({"time_destroy",on.id})
-            table.insert(time_sfx,"snacc")
+          if not hasProperty(unit, "anti lesbad") and not hasProperty(on, "anti lesbad") then
+            if timecheck(unit,"snacc",on) and timecheck(on) then
+              table.insert(to_destroy, on)
+              playSound("snacc")
+              shakeScreen(0.3, 0.15)
+            else
+              table.insert(time_destroy,{on.id,timeless})
+              addUndo({"time_destroy",on.id})
+              table.insert(time_sfx,"snacc")
+            end
+            addParticles("destroy", unit.x, unit.y, getUnitColor(unit))
           end
-          addParticles("destroy", unit.x, unit.y, getUnitColor(unit))
         end
       end
     end
@@ -1329,6 +1331,40 @@ function updateUnits(undoing, big_update)
           doOneCreate(match[1].rule, creator, createe)
         end
       end
+    end
+
+    local revived_units = {}
+    local zombies = matchesRule("?", "be", "zomb")
+    for _,match in ipairs(zombies) do
+      local name = match.rule.subject.name
+      for i,undos in ipairs(undo_buffer) do
+        if i > 1 then
+          for _,v in ipairs(undos) do
+            if v[1] == "remove" and not zomb_undos[v] then
+              unit = createUnit(v[2], v[3], v[4], v[5], nil, v[7])
+              if unit ~= nil then
+                unit.special = v[8]
+
+                if (unit.name == name or unit.fullname == name) and testConds(unit, match.rule.subject.conds) then
+                  table.insert(revived_units, {v[2], v[3], v[4], v[5], v[7], v[8], v}) --im sorry
+                end
+
+                deleteUnit(unit, false, true)
+              end
+            end
+          end
+        end
+      end
+    end
+    for _,v in ipairs(revived_units) do
+      -- aaaaaaaaaa
+      zomb_undos[v[7]] = true
+      unit = createUnit(v[1], v[2], v[3], v[4], true, v[5])
+      if unit ~= nil then
+        unit.special = v[6]
+      end
+      addParticles("bonus", unit.x, unit.y, getUnitColor(unit))
+      addUndo({"zomb", unit.id, v[7]})
     end
     
     if not timeless then
@@ -1730,39 +1766,28 @@ function miscUpdates()
         end
       end
 
+      if unit.fullname == "txt_niko" then
+        if hasProperty(unit,"brite") or hasProperty(unit,"torc") then
+          unit.sprite = {"txt/niko", "txt/niko_lit"}
+        else
+          unit.sprite = {"txt/niko", "no1"}
+        end
+      end
+
       unit.overlay = {}
-	    if (graphical_property_cache["enby"][unit] ~= nil) then
-        table.insert(unit.overlay, "enby")
-      end
-      if (graphical_property_cache["tranz"][unit] ~= nil) then
-        table.insert(unit.overlay, "trans")
-      end
-      if (graphical_property_cache["gay"][unit] ~= nil) then
-        table.insert(unit.overlay, "gay")
-      end
-      if (graphical_property_cache["ace"][unit] ~= nil) then
-        table.insert(unit.overlay, "ace")
-      end
-      if (graphical_property_cache["pan"][unit] ~= nil) then
-        table.insert(unit.overlay, "pan")
-      end
-      if (graphical_property_cache["bi"][unit] ~= nil) then
-        table.insert(unit.overlay, "bi")
-      end
-      if (graphical_property_cache["lesbab"][unit] ~= nil) then
-        table.insert(unit.overlay, "lesbian")
-      end
-      if (graphical_property_cache["aro"][unit] ~= nil) then
-        table.insert(unit.overlay, "aro")
-      end
-      if (graphical_property_cache["fluid"][unit] ~= nil) then
-        table.insert(unit.overlay, "fluid")
+      for name,overlay in pairs(overlay_props) do
+        if graphical_property_cache[name][unit] ~= nil then
+          table.insert(unit.overlay, overlay.sprite)
+        end
       end
       
       -- for optimisation in drawing
       local objects_to_check = {
-      "stelth", "colrful", "delet", "rave", "gay", "tranz", "enby", "ace", "pan", "bi", "lesbab", "aro", "fluid"
+      "stelth", "colrful", "delet", "rave"
       }
+      for name,_ in pairs(overlay_props) do
+        table.insert(objects_to_check, name)
+      end
 
       for i = 1, #objects_to_check do
         local prop = objects_to_check[i]
@@ -1916,30 +1941,50 @@ end
 
 function updateUnitColourOverride(unit)
   unit.color_override = nil
-  if unit.pinc or (unit.reed and unit.whit) then -- pink
+  if unit.pinc then
     unit.color_override = {4, 1}
-  elseif unit.purp or (unit.reed and unit.bleu) then -- purple
+  elseif unit.purp then
     unit.color_override = {3, 1}
-  elseif unit.yello or (unit.reed and unit.grun) then -- yellow
+  elseif unit.yello then
     unit.color_override = {2, 4}
-  elseif unit.orang or (unit.reed and unit.yello) then -- orange
+  elseif unit.orang then
       unit.color_override = {2, 3}
-  elseif unit.cyeann or (unit.bleu and unit.grun) then -- cyan
+  elseif unit.cyeann then
     unit.color_override = {1, 4}
-  elseif unit.brwn or (unit.orang and unit.blacc) then -- brown
+  elseif unit.brwn then
     unit.color_override = {6, 0}
-  elseif unit.reed then -- red
+  elseif unit.reed then
     unit.color_override = {2, 2}
-  elseif unit.grun or (unit.bleu and unit.yello) then -- green
+  elseif unit.grun then
     unit.color_override = {5, 2}
-  elseif unit.bleu then -- blue
+  elseif unit.bleu then
     unit.color_override = {1, 3}
-  elseif unit.graey or (unit.blacc and unit.whit) then -- grey
+  elseif unit.graey then
     unit.color_override = {0, 1}
-  elseif unit.whit or (unit.reed and unit.grun and unit.bleu) or (unit.reed and unit.cyeann) or (unit.bleu and unit.yello) or (unit.grun and unit.purp) then -- white
+  elseif unit.whit then
     unit.color_override = {0, 3}
-  elseif unit.blacc then -- black
+  elseif unit.blacc then
     unit.color_override = {0, 0}
+  end
+  --mixing colors
+  if (unit.reed and unit.whit) then --pinc
+    unit.color_override = {4, 1}
+  elseif (unit.reed and unit.grun and unit.bleu) or (unit.reed and unit.cyeann) or (unit.bleu and unit.yello) or (unit.grun and unit.purp) then -- whit
+    unit.color_override = {0, 3}
+  elseif (unit.reed and unit.bleu) then --purp
+    unit.color_override = {3, 1}
+  elseif (unit.reed and unit.grun) then --yello
+    unit.color_override = {2, 4}
+  elseif (unit.reed and unit.yello) then --orang
+    unit.color_override = {2, 3}
+  elseif (unit.bleu and unit.grun) then --cyeann
+    unit.color_override = {1, 4}
+  elseif (unit.orang and unit.blacc) then --brwn
+    unit.color_override = {6, 0}
+  elseif (unit.bleu and unit.yello) then --grun
+    unit.color_override = {5, 2}
+  elseif (unit.blacc and unit.whit) then --graey
+    unit.color_override = {0, 1}
   end
 end
 
@@ -2078,7 +2123,7 @@ function levelBlock()
     writeSaveFile(nil, {"levels", level_filename, "transform"})
   end
   
-  if hasProperty(outerlvl, "loop") then
+  if hasProperty(outerlvl, "infloop") then
     destroyLevel("infloop")
   end
   
@@ -2257,8 +2302,10 @@ function levelBlock()
   for _,ruleparent in ipairs(issnacc) do
     local unit = ruleparent[2]
     if unit ~= outerlvl and sameFloat(outerlvl,unit) and inBounds(unit.x,unit.y) and ignoreCheck(unit,outerlvl) then
-      addParticles("destroy", unit.x, unit.y, getUnitColor(unit))
-      table.insert(to_destroy, unit)
+      if not hasProperty(outerlvl, "anti lesbad") and not hasProperty(unit, "anti lesbad") then
+        addParticles("destroy", unit.x, unit.y, getUnitColor(unit))
+        table.insert(to_destroy, unit)
+      end
     end
   end
   
@@ -2266,8 +2313,10 @@ function levelBlock()
   for _,ruleparent in ipairs(issnacc) do
     local unit = ruleparent[2]
     if unit ~= outerlvl and sameFloat(outerlvl,unit) and inBounds(unit.x,unit.y) and ignoreCheck(outerlvl,unit) then
-      destroyLevel("snacc")
-      if not lvlsafe then return 0,0 end
+      if not hasProperty(outerlvl, "anti lesbad") and not hasProperty(unit, "anti lesbad") then
+        destroyLevel("snacc")
+        if not lvlsafe then return 0,0 end
+      end
     end
   end
   
@@ -2451,19 +2500,19 @@ function destroyLevel(reason)
   end
   
   if reason == "infloop" then
-    if hasProperty("loop","tryagain") then
+    if hasProperty("infloop","tryagain") then
       doTryAgain()
       level_destroyed = false
-    elseif hasProperty("loop","delet") then
+    elseif hasProperty("infloop","delet") then
       doXWX()
-    elseif hasProperty("loop",":)") then
+    elseif hasProperty("infloop",":)") then
       doWin("won")
       level_destroyed = true
-    elseif hasProperty("loop","un:)") then
+    elseif hasProperty("infloop","un:)") then
       doWin("won", false)
       level_destroyed = true
     end
-    local berule = matchesRule("loop","be","?")
+    local berule = matchesRule("infloop","be","?")
     for _,rule in ipairs(berule) do
       local object = getTile(rule.rule.object.name)
       if object then
@@ -2476,7 +2525,7 @@ function destroyLevel(reason)
   if level_destroyed then
     local units_to_destroy = {}
     for _,unit in ipairs(units) do
-      if inBounds(unit.x, unit.y) then
+      if inBounds(unit.x, unit.y) or reason == "infloop" then
         table.insert(units_to_destroy, unit);
       end
     end
@@ -2624,6 +2673,39 @@ function convertUnits(pass)
 
   local converted_units = {}
   local del_cursors = {}
+
+
+  local removed_rule = {}
+  local removed_rule_unit = {}
+  local function removeRuleChain(rule, pride)
+    if removed_rule[rule] then return end
+    removed_rule[rule] = true
+    for _,unit in ipairs(rule.units) do
+      if not removed_rule_unit[unit] then
+        removed_rule_unit[unit] = true
+        table.insert(converted_units, unit)
+        local particle_colors = {}
+        for _,color in ipairs(overlay_props[pride].colors) do
+          table.insert(particle_colors, main_palette_for_colour[color])
+        end
+        addParticles("bonus", unit.x, unit.y, particle_colors)
+        for _,other_rule in ipairs(rules_with_unit[unit]) do
+          removeRuleChain(other_rule, pride)
+        end
+      end
+    end
+  end
+
+  local pride_flags = {"gay", "tranz", "bi", "pan", "lesbab", "ace", "aro", "enby", "fluid", "πoly"}
+  for _,pride in ipairs(pride_flags) do
+    if rules_with["anti "..pride] then
+      for _,bad in ipairs(rules_with["anti "..pride]) do
+        removed_rule = {}
+        removed_rule_unit = {}
+        removeRuleChain(bad, pride)
+      end
+    end
+  end
   
   local meta = getUnitsWithEffectAndCount("txtify")
   for unit,amt in pairs(meta) do
@@ -3046,6 +3128,17 @@ function convertUnits(pass)
       addUndo({"create", new_unit.id, true, created_from_id = slice.id})
     end
   end
+
+  local pans = getUnitsWithEffect("pan")
+  for _,cake in  ipairs(pans) do
+    if cake.name == "lie" and not hasProperty(unit, "notranform") then
+      if not cake.removed then
+        table.insert(converted_units, cake)
+      end
+      local new_unit = createUnit("panlie", cake.x, cake.y, cake.dir, true)
+      addUndo({"create", new_unit.id, true, created_from_id = cake.id})
+    end
+  end
   
   local thes = matchesRule(nil,"be","the")
   for _,ruleparent in ipairs(thes) do
@@ -3165,7 +3258,7 @@ function deleteUnits(del_units,convert,gone)
       if unit.class == "cursor" then
         addUndo({"remove_cursor",unit.screenx,unit.screeny,unit.id})
       else
-        addUndo({"remove", unit.tile, unit.x, unit.y, unit.dir, convert or false, unit.id, unit.special})
+        addUndo({"remove", unit.tile, unit.x, unit.y, unit.dir, convert or false, unit.id, unit.special, gone or false})
       end
     end
     if unit.class ~= "cursor" then
@@ -3176,7 +3269,7 @@ function deleteUnits(del_units,convert,gone)
   end
 end
 
-function createUnit(tile,x,y,dir,convert,id_,really_create_empty,prefix)
+function createUnit(tile,x,y,dir,convert,id_,really_create_empty,prefix,anti_gone) --ugh
   local unit = {}
   unit.class = "unit"
 
@@ -3226,6 +3319,14 @@ function createUnit(tile,x,y,dir,convert,id_,really_create_empty,prefix)
     if convert then
       unit.draw.scaley = 0
       addTween(tween.new(0.1, unit.draw, {scaley = 1}), "unit:scaley:" .. unit.tempid)
+    elseif anti_gone then
+      unit.draw.y = unit.y - love.math.random(5,9)
+      unit.draw.rotation = (90 + love.math.random(0,180)) * (love.math.random() > .5 and 1 or -1)
+      unit.draw.opacity = 0
+      local method = love.math.random() > .01 and "outSine" or "outElastic"
+      addTween(tween.new(1.5, unit.draw, {opacity = 1}, method), "unit:opacity:" .. unit.tempid)
+      addTween(tween.new(1.5, unit.draw, {rotation = 0}, method), "unit:rotation:" .. unit.tempid)
+      addTween(tween.new(1.5, unit.draw, {y = unit.y}, method), "unit:pos:" .. unit.tempid)
     end
   end
 
@@ -3587,10 +3688,10 @@ function updateNameBasedOnDir(unit)
     unit.textname = "spin" .. tostring(unit.dir)
     should_parse_rules = true
   elseif unit.fullname == "letter_colon" then
-    if unit.dir == 1 or unit.dir == 2 or unit.dir == 3 then
-      unit.textname = ":"
+    if unit.dir == 3 then
+      unit.textname = ".."
     else
-      unit.textname = "  "
+      unit.textname = ":"
     end
     should_parse_rules = true
   elseif unit.fullname == "letter_parenthesis" then
